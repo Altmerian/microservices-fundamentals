@@ -1,0 +1,25 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.9.xsd">
+
+    <changeSet author="Pavel_Shakhlovich" id="create-resource-metadata-table">
+
+        <createSequence sequenceName="resource_metadata_seq" incrementBy="1" startValue="1"/>
+
+        <createTable tableName="resource_metadata">
+            <column name="id" type="INT" defaultValueSequenceNext="resource_metadata_seq">
+                <constraints primaryKey="true" primaryKeyName="resource_metadata_pkey"/>
+            </column>
+
+            <column name="creation_time" type="TIMESTAMP WITHOUT TIME ZONE"/>
+            <column name="file_name" type="VARCHAR(255)"/>
+            <column name="size_in_bytes" type="BIGINT"/>
+            <column name="file_extension" type="VARCHAR(10)"/>
+        </createTable>
+
+        <addUniqueConstraint columnNames="file_name" constraintName="resource_file_name_unique_constraint"
+                             tableName="resource_metadata"/>
+    </changeSet>
+</databaseChangeLog>

@@ -1,0 +1,12 @@
+version: '3.9'
+services:
+  resource-service-db:
+    image: postgres:14-alpine
+    env_file: resource-service.env
+    ports:
+      - 5433:5432
+    volumes:
+      - resource-service-db:/var/lib/postgresql/data/
+
+volumes:
+  resource-service-db:
