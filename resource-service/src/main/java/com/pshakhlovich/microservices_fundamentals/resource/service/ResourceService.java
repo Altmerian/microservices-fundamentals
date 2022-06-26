@@ -1,6 +1,7 @@
 package com.pshakhlovich.microservices_fundamentals.resource.service;
 
 import com.pshakhlovich.microservices_fundamentals.resource.config.Mp3BucketProperties;
+import com.pshakhlovich.microservices_fundamentals.resource.dto.IdWrapper;
 import com.pshakhlovich.microservices_fundamentals.resource.model.ResourceMetadata;
 import com.pshakhlovich.microservices_fundamentals.resource.service.repository.ResourceRepository;
 import com.pshakhlovich.microservices_fundamentals.resource.validator.Mp3FileValidator;
@@ -9,17 +10,20 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FilenameUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
-import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.core.waiters.WaiterResponse;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
 
 import javax.annotation.PostConstruct;
+import javax.validation.constraints.Size;
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -76,7 +80,7 @@ public class ResourceService {
               .orElseThrow(
                   () ->
                       new ResponseStatusException(
-                          HttpStatus.BAD_REQUEST,
+                          HttpStatus.NOT_FOUND,
                           String.format("Resource with id=%d not found", resourceId)));
 
       GetObjectRequest objectRequest =
@@ -85,9 +89,8 @@ public class ResourceService {
               .bucket(mp3BucketProperties.getBucketName())
               .build();
 
-      ResponseBytes<GetObjectResponse> objectBytes = s3Client.getObjectAsBytes(objectRequest);
-      byte[] data = objectBytes.asByteArray();
       return s3Client.getObjectAsBytes(objectRequest).asByteArray();
+
     } catch (S3Exception e) {
       throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage(), e);
     }
@@ -125,6 +128,45 @@ public class ResourceService {
       return true;
     } catch (NoSuchBucketException e) {
       return false;
+    }
+  }
+
+  @Transactional
+  public IdWrapper<int[]> delete(@Size List<Integer> ids) {
+
+    List<ResourceMetadata> resourcesToDelete = resourceRepository.findAllById(ids);
+    if (resourcesToDelete.isEmpty()) {
+      throw new ResponseStatusException(
+          HttpStatus.NOT_FOUND, "There are no resources with provided ids: " + ids);
+    }
+
+    var idsByFileNamesToDelete =
+        resourcesToDelete.stream()
+            .collect(Collectors.toMap(ResourceMetadata::getFileName, ResourceMetadata::getId));
+    List<ObjectIdentifier> keys =
+        resourcesToDelete.stream()
+            .map(
+                resourceMetadata ->
+                    ObjectIdentifier.builder().key(resourceMetadata.getFileName()).build())
+            .toList();
+    var delete = Delete.builder().objects(keys).build();
+
+    try {
+      var multiObjectDeleteRequest =
+          DeleteObjectsRequest.builder()
+              .bucket(mp3BucketProperties.getBucketName())
+              .delete(delete)
+              .build();
+      var deleteObjectsResponse = s3Client.deleteObjects(multiObjectDeleteRequest);
+      resourceRepository.deleteAllById(idsByFileNamesToDelete.values());
+      return new IdWrapper<>(
+          deleteObjectsResponse.deleted().stream()
+              .map(DeletedObject::key)
+              .mapToInt(idsByFileNamesToDelete::get)
+              .sorted()
+              .toArray());
+    } catch (S3Exception e) {
+      throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage(), e);
     }
   }
 }
