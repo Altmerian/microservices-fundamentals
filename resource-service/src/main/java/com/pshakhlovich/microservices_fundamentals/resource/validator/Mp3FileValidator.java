@@ -8,10 +8,12 @@ import java.util.Objects;
 
 public class Mp3FileValidator {
 
+  private static final String INVALID_FILE_CONTENT_TYPE = "Invalid file content type";
+
   public void checkContentIsValidMp3File(MultipartFile multipartFile) {
-    Objects.requireNonNull(multipartFile.getContentType(), "Wrong content type");
+    Objects.requireNonNull(multipartFile.getContentType(), INVALID_FILE_CONTENT_TYPE);
     if (!multipartFile.getContentType().equalsIgnoreCase("audio/mpeg")) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Wrong file content type. 'audio/mpeg' is only acceptable");
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, INVALID_FILE_CONTENT_TYPE);
     }
   }
 }
