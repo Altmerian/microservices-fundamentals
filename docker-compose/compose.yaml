@@ -8,5 +8,14 @@ services:
     volumes:
       - resource-service-db:/var/lib/postgresql/data/
 
+  song-service-db:
+    image: postgres:14-alpine
+    env_file: song-service.env
+    ports:
+      - 5434:5432
+    volumes:
+      - song-service-db:/var/lib/postgresql/data/
+
 volumes:
   resource-service-db:
+  song-service-db:

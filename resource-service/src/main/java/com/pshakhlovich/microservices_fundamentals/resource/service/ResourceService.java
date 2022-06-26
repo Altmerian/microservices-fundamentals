@@ -3,7 +3,7 @@ package com.pshakhlovich.microservices_fundamentals.resource.service;
 import com.pshakhlovich.microservices_fundamentals.resource.config.Mp3BucketProperties;
 import com.pshakhlovich.microservices_fundamentals.resource.dto.IdWrapper;
 import com.pshakhlovich.microservices_fundamentals.resource.model.ResourceMetadata;
-import com.pshakhlovich.microservices_fundamentals.resource.service.repository.ResourceRepository;
+import com.pshakhlovich.microservices_fundamentals.resource.repository.ResourceRepository;
 import com.pshakhlovich.microservices_fundamentals.resource.validator.Mp3FileValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -96,6 +96,45 @@ public class ResourceService {
     }
   }
 
+  @Transactional
+  public IdWrapper<int[]> delete(@Size List<Integer> ids) {
+
+    List<ResourceMetadata> resourcesToDelete = resourceRepository.findAllById(ids);
+    if (resourcesToDelete.isEmpty()) {
+      throw new ResponseStatusException(
+              HttpStatus.NOT_FOUND, "There are no resources with provided ids: " + ids);
+    }
+
+    var idsByFileNamesToDelete =
+            resourcesToDelete.stream()
+                    .collect(Collectors.toMap(ResourceMetadata::getFileName, ResourceMetadata::getId));
+    List<ObjectIdentifier> keys =
+            resourcesToDelete.stream()
+                    .map(
+                            resourceMetadata ->
+                                    ObjectIdentifier.builder().key(resourceMetadata.getFileName()).build())
+                    .toList();
+    var delete = Delete.builder().objects(keys).build();
+
+    try {
+      var multiObjectDeleteRequest =
+              DeleteObjectsRequest.builder()
+                      .bucket(mp3BucketProperties.getBucketName())
+                      .delete(delete)
+                      .build();
+      var deleteObjectsResponse = s3Client.deleteObjects(multiObjectDeleteRequest);
+      resourceRepository.deleteAllById(idsByFileNamesToDelete.values());
+      return new IdWrapper<>(
+              deleteObjectsResponse.deleted().stream()
+                      .map(DeletedObject::key)
+                      .mapToInt(idsByFileNamesToDelete::get)
+                      .sorted()
+                      .toArray());
+    } catch (S3Exception e) {
+      throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage(), e);
+    }
+  }
+
   @PostConstruct
   private void createBucket() {
     var bucketName = mp3BucketProperties.getBucketName();
@@ -128,45 +167,6 @@ public class ResourceService {
       return true;
     } catch (NoSuchBucketException e) {
       return false;
-    }
-  }
-
-  @Transactional
-  public IdWrapper<int[]> delete(@Size List<Integer> ids) {
-
-    List<ResourceMetadata> resourcesToDelete = resourceRepository.findAllById(ids);
-    if (resourcesToDelete.isEmpty()) {
-      throw new ResponseStatusException(
-          HttpStatus.NOT_FOUND, "There are no resources with provided ids: " + ids);
-    }
-
-    var idsByFileNamesToDelete =
-        resourcesToDelete.stream()
-            .collect(Collectors.toMap(ResourceMetadata::getFileName, ResourceMetadata::getId));
-    List<ObjectIdentifier> keys =
-        resourcesToDelete.stream()
-            .map(
-                resourceMetadata ->
-                    ObjectIdentifier.builder().key(resourceMetadata.getFileName()).build())
-            .toList();
-    var delete = Delete.builder().objects(keys).build();
-
-    try {
-      var multiObjectDeleteRequest =
-          DeleteObjectsRequest.builder()
-              .bucket(mp3BucketProperties.getBucketName())
-              .delete(delete)
-              .build();
-      var deleteObjectsResponse = s3Client.deleteObjects(multiObjectDeleteRequest);
-      resourceRepository.deleteAllById(idsByFileNamesToDelete.values());
-      return new IdWrapper<>(
-          deleteObjectsResponse.deleted().stream()
-              .map(DeletedObject::key)
-              .mapToInt(idsByFileNamesToDelete::get)
-              .sorted()
-              .toArray());
-    } catch (S3Exception e) {
-      throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage(), e);
     }
   }
 }

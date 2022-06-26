@@ -1,4 +1,4 @@
-package com.pshakhlovich.microservices_fundamentals.resource.service.repository;
+package com.pshakhlovich.microservices_fundamentals.resource.repository;
 
 import com.pshakhlovich.microservices_fundamentals.resource.model.ResourceMetadata;
 import org.springframework.data.jpa.repository.JpaRepository;
