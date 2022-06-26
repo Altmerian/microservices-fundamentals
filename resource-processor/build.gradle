@@ -1,0 +1,5 @@
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.apache.tika:tika-core:2.4.1'
+    implementation 'org.apache.tika:tika-parser-audiovideo-module:2.4.1'
+}

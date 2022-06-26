@@ -67,7 +67,6 @@ public class ResourceService {
       return resourceRepository.saveAndFlush(resourceMetadata).getId();
 
     } catch (IOException | S3Exception e) {
-      //            delete(multipartFile.getOriginalFilename());
       throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage(), e);
     }
   }
