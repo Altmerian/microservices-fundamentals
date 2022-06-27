@@ -8,9 +8,7 @@ dependencies {
     implementation 'software.amazon.awssdk:s3'
     implementation 'commons-io:commons-io:2.11.0'
     implementation 'org.hibernate:hibernate-validator:7.0.4.Final'
-
-    // TODO: move below dependency to the resource-processor service
-    implementation 'org.apache.tika:tika-core:2.4.1'
+    implementation 'org.springframework.kafka:spring-kafka'
 
     runtimeOnly 'org.postgresql:postgresql'
 }

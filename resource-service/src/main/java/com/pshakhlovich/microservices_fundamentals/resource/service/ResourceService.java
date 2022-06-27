@@ -2,6 +2,7 @@ package com.pshakhlovich.microservices_fundamentals.resource.service;
 
 import com.pshakhlovich.microservices_fundamentals.resource.config.Mp3BucketProperties;
 import com.pshakhlovich.microservices_fundamentals.resource.dto.IdWrapper;
+import com.pshakhlovich.microservices_fundamentals.resource.event.EventPublisher;
 import com.pshakhlovich.microservices_fundamentals.resource.model.ResourceMetadata;
 import com.pshakhlovich.microservices_fundamentals.resource.repository.ResourceRepository;
 import com.pshakhlovich.microservices_fundamentals.resource.validator.Mp3FileValidator;
@@ -34,7 +35,9 @@ public class ResourceService {
   private final S3Client s3Client;
   private final ResourceRepository resourceRepository;
   private final Mp3FileValidator mp3FileValidator = new Mp3FileValidator();
+  private final EventPublisher eventPublisher;
 
+  @Transactional
   public Integer upload(MultipartFile multipartFile) {
     mp3FileValidator.checkContentIsValidMp3File(multipartFile);
 
@@ -64,7 +67,9 @@ public class ResourceService {
               .sizeInBytes(multipartFile.getSize())
               .creationTime(LocalDateTime.now())
               .build();
-      return resourceRepository.saveAndFlush(resourceMetadata).getId();
+      Integer resourceId = resourceRepository.saveAndFlush(resourceMetadata).getId();
+      eventPublisher.publish(resourceMetadata);
+      return resourceId;
 
     } catch (IOException | S3Exception e) {
       throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage(), e);
