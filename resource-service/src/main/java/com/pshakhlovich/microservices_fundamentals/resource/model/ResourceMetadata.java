@@ -3,6 +3,7 @@ package com.pshakhlovich.microservices_fundamentals.resource.model;
 import lombok.*;
 
 import javax.persistence.*;
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
 @Entity
@@ -13,7 +14,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(of = "id")
-public class ResourceMetadata {
+public class ResourceMetadata implements Serializable {
 
   @Id
   @GeneratedValue(generator = "resource_metadata_seq")

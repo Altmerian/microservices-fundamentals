@@ -6,16 +6,20 @@ import com.pshakhlovich.microservices_fundamentals.resource.config.KafkaProperti
 import com.pshakhlovich.microservices_fundamentals.resource.model.ResourceMetadata;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.clients.producer.ProducerRecord;
 import org.springframework.http.HttpStatus;
 import org.springframework.kafka.core.KafkaProducerException;
 import org.springframework.kafka.core.KafkaSendCallback;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.lang.NonNull;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Component;
 import org.springframework.util.concurrent.ListenableFuture;
 import org.springframework.web.server.ResponseStatusException;
+
+import javax.annotation.PostConstruct;
 
 @Component
 @Slf4j
@@ -26,10 +30,15 @@ public class EventPublisher {
   private final ObjectMapper objectMapper;
   private final KafkaProperties kafkaProperties;
 
-  public void publish(ResourceMetadata resourceMetadata) throws JsonProcessingException {
-    final ProducerRecord<Integer, String> record = createRecord(resourceMetadata);
+  @PostConstruct
+  void init() {
+    kafkaTemplate.setDefaultTopic(kafkaProperties.getResourceTopic());
+  }
 
-    ListenableFuture<SendResult<Integer, String>> future = kafkaTemplate.send(record);
+  public void publish(ResourceMetadata resourceMetadata) throws JsonProcessingException {
+    final Message<String> message = createMessage(resourceMetadata);
+
+    ListenableFuture<SendResult<Integer, String>> future = kafkaTemplate.send(message);
     future.addCallback(
         new KafkaSendCallback<>() {
           @Override
@@ -40,6 +49,7 @@ public class EventPublisher {
                 result.getRecordMetadata().offset(),
                 result.getRecordMetadata().topic());
           }
+
           @Override
           public void onFailure(@NonNull KafkaProducerException ex) {
             log.error(ex.getMessage(), ex);
@@ -49,10 +59,10 @@ public class EventPublisher {
         });
   }
 
-  private ProducerRecord<Integer, String> createRecord(ResourceMetadata resourceMetadata) throws JsonProcessingException {
-    return new ProducerRecord<>(
-        kafkaProperties.getResourceTopic(),
-        resourceMetadata.getId(),
-        objectMapper.writeValueAsString(resourceMetadata));
+  private Message<String> createMessage(ResourceMetadata resourceMetadata)
+      throws JsonProcessingException {
+    return MessageBuilder.withPayload(objectMapper.writeValueAsString(resourceMetadata))
+        .setHeader(KafkaHeaders.MESSAGE_KEY, resourceMetadata.getId())
+        .build();
   }
 }

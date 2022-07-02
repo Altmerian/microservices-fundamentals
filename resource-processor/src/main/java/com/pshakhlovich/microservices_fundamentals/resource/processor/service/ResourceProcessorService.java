@@ -1,17 +1,23 @@
 package com.pshakhlovich.microservices_fundamentals.resource.processor.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pshakhlovich.microservices_fundamentals.resource.processor.domain.ResourceMetadata;
 import com.pshakhlovich.microservices_fundamentals.resource.processor.domain.SongMetadata;
-import com.pshakhlovich.microservices_fundamentals.resource.processor.infrastructure.resource.ResourceServiceClient;
-import com.pshakhlovich.microservices_fundamentals.resource.processor.infrastructure.song.SongServiceClient;
+import com.pshakhlovich.microservices_fundamentals.resource.processor.infrastructure.resource.ResourceClient;
+import com.pshakhlovich.microservices_fundamentals.resource.processor.infrastructure.song.SongClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.tika.exception.TikaException;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.parser.ParseContext;
 import org.apache.tika.parser.Parser;
 import org.apache.tika.parser.mp3.Mp3Parser;
 import org.springframework.core.io.ByteArrayResource;
+import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
@@ -24,11 +30,21 @@ import java.util.Arrays;
 @Slf4j
 public class ResourceProcessorService {
 
-  private ResourceServiceClient resourceServiceClient;
-  private SongServiceClient songServiceClient;
+  private final ResourceClient resourceClient;
+  private final SongClient songClient;
+  private final ObjectMapper objectMapper;
 
-  public void processUploadEvent(Integer resourceId) {
-    ByteArrayResource resource = resourceServiceClient.getResource(resourceId);
+  @Transactional
+  @KafkaListener(
+      id = "res-process-1",
+      topics = "resource-upload",
+      properties = {ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG + " localhost:9093"})
+  public void processUploadEvent(String message) throws JsonProcessingException {
+
+    log.info("The following message was received from the resource-upload topic: " + message);
+    var resourceId = objectMapper.readValue(message, ResourceMetadata.class).getId();
+
+    ByteArrayResource resource = resourceClient.getResource(resourceId);
     ContentHandler handler = new DefaultHandler();
     Metadata metadata = new Metadata();
     Parser parser = new Mp3Parser();
@@ -44,12 +60,15 @@ public class ResourceProcessorService {
 
     var songMetadata =
         SongMetadata.builder()
-            .name(metadata.get("title"))
+            .name(metadata.get("dc:title"))
             .artist(metadata.get("xmpDM:artist"))
             .album(metadata.get("xmpDM:album"))
+            .length(metadata.get("xmpDM:duration"))
             .resourceId(resourceId)
+            .year(Integer.valueOf(metadata.get("xmpDM:releaseDate")))
             .build();
 
-    songServiceClient.storeSongMetadata(songMetadata);
+    var songMetadataId = songClient.storeSongMetadata(songMetadata);
+    log.info("Song metadata has been persisted with id=" + songMetadataId);
   }
 }

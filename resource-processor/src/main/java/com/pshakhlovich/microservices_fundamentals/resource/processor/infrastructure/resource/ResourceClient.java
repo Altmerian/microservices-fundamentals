@@ -2,6 +2,6 @@ package com.pshakhlovich.microservices_fundamentals.resource.processor.infrastru
 
 import org.springframework.core.io.ByteArrayResource;
 
-public interface ResourceServiceClient {
+public interface ResourceClient {
     ByteArrayResource getResource(Integer id);
 }

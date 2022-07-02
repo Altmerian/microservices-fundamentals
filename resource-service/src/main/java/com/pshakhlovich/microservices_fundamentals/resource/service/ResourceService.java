@@ -24,11 +24,14 @@ import javax.validation.constraints.Size;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@Transactional
 public class ResourceService {
 
   private final Mp3BucketProperties mp3BucketProperties;
@@ -37,7 +40,6 @@ public class ResourceService {
   private final Mp3FileValidator mp3FileValidator = new Mp3FileValidator();
   private final EventPublisher eventPublisher;
 
-  @Transactional
   public Integer upload(MultipartFile multipartFile) {
     mp3FileValidator.checkContentIsValidMp3File(multipartFile);
 
@@ -87,53 +89,54 @@ public class ResourceService {
                           HttpStatus.NOT_FOUND,
                           String.format("Resource with id=%d not found", resourceId)));
 
-      GetObjectRequest objectRequest =
+      var getObjectRequest =
           GetObjectRequest.builder()
               .key(resourceMetadata.getFileName())
               .bucket(mp3BucketProperties.getBucketName())
               .build();
 
-      return s3Client.getObjectAsBytes(objectRequest).asByteArray();
+      emulateAdditionalRandomDelay();
+
+      return s3Client.getObjectAsBytes(getObjectRequest).asByteArray();
 
     } catch (S3Exception e) {
       throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage(), e);
     }
   }
 
-  @Transactional
   public IdWrapper<int[]> delete(@Size List<Integer> ids) {
 
     List<ResourceMetadata> resourcesToDelete = resourceRepository.findAllById(ids);
     if (resourcesToDelete.isEmpty()) {
       throw new ResponseStatusException(
-              HttpStatus.NOT_FOUND, "There are no resources with provided ids: " + ids);
+          HttpStatus.NOT_FOUND, "There are no resources with provided ids: " + ids);
     }
 
     var idsByFileNamesToDelete =
-            resourcesToDelete.stream()
-                    .collect(Collectors.toMap(ResourceMetadata::getFileName, ResourceMetadata::getId));
+        resourcesToDelete.stream()
+            .collect(Collectors.toMap(ResourceMetadata::getFileName, ResourceMetadata::getId));
     List<ObjectIdentifier> keys =
-            resourcesToDelete.stream()
-                    .map(
-                            resourceMetadata ->
-                                    ObjectIdentifier.builder().key(resourceMetadata.getFileName()).build())
-                    .toList();
+        resourcesToDelete.stream()
+            .map(
+                resourceMetadata ->
+                    ObjectIdentifier.builder().key(resourceMetadata.getFileName()).build())
+            .toList();
     var delete = Delete.builder().objects(keys).build();
 
     try {
       var multiObjectDeleteRequest =
-              DeleteObjectsRequest.builder()
-                      .bucket(mp3BucketProperties.getBucketName())
-                      .delete(delete)
-                      .build();
+          DeleteObjectsRequest.builder()
+              .bucket(mp3BucketProperties.getBucketName())
+              .delete(delete)
+              .build();
       var deleteObjectsResponse = s3Client.deleteObjects(multiObjectDeleteRequest);
       resourceRepository.deleteAllById(idsByFileNamesToDelete.values());
       return new IdWrapper<>(
-              deleteObjectsResponse.deleted().stream()
-                      .map(DeletedObject::key)
-                      .mapToInt(idsByFileNamesToDelete::get)
-                      .sorted()
-                      .toArray());
+          deleteObjectsResponse.deleted().stream()
+              .map(DeletedObject::key)
+              .mapToInt(idsByFileNamesToDelete::get)
+              .sorted()
+              .toArray());
     } catch (S3Exception e) {
       throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage(), e);
     }
@@ -171,6 +174,15 @@ public class ResourceService {
       return true;
     } catch (NoSuchBucketException e) {
       return false;
+    }
+  }
+
+  private void emulateAdditionalRandomDelay() {
+    long delayInMillis = ThreadLocalRandom.current().nextLong(700, 1500);
+    try {
+      TimeUnit.MILLISECONDS.sleep(delayInMillis);
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
     }
   }
 }
