@@ -13,21 +13,32 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Size;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @RestController
 @RequestMapping("/resources")
 @RequiredArgsConstructor
 public class ResourceController {
 
+  private final AtomicInteger sessionFailures = new AtomicInteger(0);
   private final ResourceService resourceService;
 
   @GetMapping("/{id}")
   public ResponseEntity<ByteArrayResource> download(@PathVariable Integer id) {
+    return emulateTransientFailure(id);
+  }
+
+  private ResponseEntity<ByteArrayResource> emulateTransientFailure(Integer id) {
+
+    if (sessionFailures.getAndIncrement() < 2) {
+      return ResponseEntity.internalServerError().build();
+    }
+    sessionFailures.set(0);
     var data = resourceService.download(id);
     return ResponseEntity.ok()
-        .contentLength(data.length)
-        .header("Content-type", "audio/mpeg")
-        .body(new ByteArrayResource(data));
+            .contentLength(data.length)
+            .header("Content-type", "audio/mpeg")
+            .body(new ByteArrayResource(data));
   }
 
   @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

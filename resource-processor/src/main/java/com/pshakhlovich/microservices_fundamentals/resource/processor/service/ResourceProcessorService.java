@@ -23,6 +23,9 @@ import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
 import java.io.IOException;
+import java.time.Duration;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 
 @Service
@@ -38,7 +41,10 @@ public class ResourceProcessorService {
   @KafkaListener(
       id = "res-process-1",
       topics = "resource-upload",
-      properties = {ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG + " localhost:9093"})
+      properties = {
+              ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG + " localhost:9093",
+              ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG + " org.apache.kafka.common.serialization.IntegerDeserializer",
+      })
   public void processUploadEvent(String message) throws JsonProcessingException {
 
     log.info("The following message was received from the resource-upload topic: " + message);
@@ -63,12 +69,18 @@ public class ResourceProcessorService {
             .name(metadata.get("dc:title"))
             .artist(metadata.get("xmpDM:artist"))
             .album(metadata.get("xmpDM:album"))
-            .length(metadata.get("xmpDM:duration"))
+            .length(formatDuration(metadata.get("xmpDM:duration")))
             .resourceId(resourceId)
             .year(Integer.valueOf(metadata.get("xmpDM:releaseDate")))
             .build();
 
     var songMetadataId = songClient.storeSongMetadata(songMetadata);
     log.info("Song metadata has been persisted with id=" + songMetadataId);
+  }
+
+  private String formatDuration(String input) {
+    double doubleDuration = Double.parseDouble(input);
+    var durationInMillis = (long)(doubleDuration * 1000);
+    return LocalTime.MIDNIGHT.plus(Duration.ofMillis(durationInMillis)).format(DateTimeFormatter.ofPattern("HH:mm:ss"));
   }
 }

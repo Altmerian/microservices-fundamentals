@@ -24,7 +24,6 @@ import javax.validation.constraints.Size;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -95,7 +94,7 @@ public class ResourceService {
               .bucket(mp3BucketProperties.getBucketName())
               .build();
 
-      emulateAdditionalRandomDelay();
+      emulateAdditionalDelay();
 
       return s3Client.getObjectAsBytes(getObjectRequest).asByteArray();
 
@@ -177,10 +176,9 @@ public class ResourceService {
     }
   }
 
-  private void emulateAdditionalRandomDelay() {
-    long delayInMillis = ThreadLocalRandom.current().nextLong(700, 1500);
+  private void emulateAdditionalDelay() {
     try {
-      TimeUnit.MILLISECONDS.sleep(delayInMillis);
+      TimeUnit.SECONDS.sleep(1);
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
     }
