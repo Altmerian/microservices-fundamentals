@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @RequiredArgsConstructor
 public class ResourceController {
 
-  private final AtomicInteger sessionFailures = new AtomicInteger(0);
+  private final AtomicInteger failuresNumber = new AtomicInteger(0);
   private final ResourceService resourceService;
 
   @GetMapping("/{id}")
@@ -29,11 +29,10 @@ public class ResourceController {
   }
 
   private ResponseEntity<ByteArrayResource> emulateTransientFailure(Integer id) {
-
-    if (sessionFailures.getAndIncrement() < 2) {
+    if (failuresNumber.getAndIncrement() < 2) {
       return ResponseEntity.internalServerError().build();
     }
-    sessionFailures.set(0);
+    failuresNumber.set(0);
     var data = resourceService.download(id);
     return ResponseEntity.ok()
             .contentLength(data.length)

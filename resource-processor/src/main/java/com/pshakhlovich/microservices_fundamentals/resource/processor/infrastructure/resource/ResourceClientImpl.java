@@ -19,8 +19,8 @@ import static java.time.temporal.ChronoUnit.SECONDS;
 @Slf4j
 public class ResourceClientImpl implements ResourceClient {
 
-  private static final Duration CONNECTION_TIMEOUT = Duration.of(20, SECONDS);
-  private static final int BACKOFF_DELAY = 2000;
+  private static final Duration CONNECTION_TIMEOUT = Duration.of(30, SECONDS);
+  private static final int BACKOFF_DELAY = 1000;
   private static final String RESOURCE_URL = "http://localhost:8081/resources/";
 
   private final RestTemplate restTemplate;
@@ -34,7 +34,10 @@ public class ResourceClientImpl implements ResourceClient {
   }
 
   @Override
-  @Retryable(value = ResponseStatusException.class, backoff = @Backoff(delay = BACKOFF_DELAY))
+  @Retryable(
+      value = ResponseStatusException.class,
+      backoff = @Backoff(delay = BACKOFF_DELAY),
+      listeners = "resourceClientRetryListener")
   public ByteArrayResource getResource(Integer resourceId) {
     try {
       return restTemplate.getForObject(RESOURCE_URL + resourceId, ByteArrayResource.class);

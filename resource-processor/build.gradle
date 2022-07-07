@@ -2,4 +2,6 @@ dependencies {
     implementation 'org.apache.tika:tika-core:2.4.1'
     implementation 'org.apache.tika:tika-parser-audiovideo-module:2.4.1'
     implementation 'org.springframework.kafka:spring-kafka'
+    implementation 'org.springframework.retry:spring-retry'
+    implementation 'org.springframework:spring-aspects'
 }
