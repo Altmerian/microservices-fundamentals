@@ -3,11 +3,19 @@ server:
   error:
     include-message: always
 
-s3:
-  bucket-name: pavel-shakhlovich-mp3
-  region: eu-central-1
+spring:
+  profiles:
+    active: dev
+
+kafka:
+  resource-topic: resource-upload
+
+---
 
 spring:
+  config:
+    activate:
+      on-profile: dev
   datasource:
     url: jdbc:postgresql://localhost:5433/resource-service-db
     username: root
@@ -20,6 +28,10 @@ spring:
     multipart:
       max-file-size: 10MB
       max-request-size: 10MB
+
+s3:
+  bucket-name: pavel-shakhlovich-mp3
+  region: eu-central-1
+
 kafka:
   bootstrap-address: localhost:9093
-  resource-topic: resource-upload

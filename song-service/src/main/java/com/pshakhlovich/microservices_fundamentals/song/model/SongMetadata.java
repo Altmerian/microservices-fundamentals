@@ -24,5 +24,5 @@ public class SongMetadata {
   @Column private String album;
   @Column private String length;
   @Column private Integer resourceId;
-  @Column private Integer year;
+  @Column(name = "\"year\"") private Integer year;
 }

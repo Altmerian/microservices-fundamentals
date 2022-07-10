@@ -8,6 +8,7 @@ import org.apache.kafka.common.serialization.IntegerSerializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.kafka.config.TopicBuilder;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.core.KafkaAdmin;
@@ -21,6 +22,7 @@ import java.util.Map;
 
 @Configuration
 @RequiredArgsConstructor
+@Profile("!test")
 public class ApplicationConfig {
 
   private final Mp3BucketProperties mp3BucketProperties;

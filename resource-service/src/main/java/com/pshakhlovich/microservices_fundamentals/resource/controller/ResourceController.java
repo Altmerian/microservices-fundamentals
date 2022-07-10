@@ -3,6 +3,7 @@ package com.pshakhlovich.microservices_fundamentals.resource.controller;
 import com.pshakhlovich.microservices_fundamentals.resource.dto.IdWrapper;
 import com.pshakhlovich.microservices_fundamentals.resource.service.ResourceService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -21,11 +22,18 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ResourceController {
 
   private final AtomicInteger failuresNumber = new AtomicInteger(0);
+
   private final ResourceService resourceService;
+
+  @Value("${spring.profiles.active:}")
+  private String activeProfiles;
 
   @GetMapping("/{id}")
   public ResponseEntity<ByteArrayResource> download(@PathVariable Integer id) {
-    return emulateTransientFailure(id);
+    if (activeProfiles.equalsIgnoreCase("dev")) {
+      return emulateTransientFailure(id);
+    }
+    return getResource(id);
   }
 
   private ResponseEntity<ByteArrayResource> emulateTransientFailure(Integer id) {
@@ -33,6 +41,10 @@ public class ResourceController {
       return ResponseEntity.internalServerError().build();
     }
     failuresNumber.set(0);
+    return getResource(id);
+  }
+
+  private ResponseEntity<ByteArrayResource> getResource(Integer id) {
     var data = resourceService.download(id);
     return ResponseEntity.ok()
             .contentLength(data.length)

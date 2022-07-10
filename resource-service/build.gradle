@@ -8,5 +8,8 @@ dependencies {
     implementation 'org.hibernate:hibernate-validator:7.0.4.Final'
     implementation 'org.springframework.kafka:spring-kafka'
 
+    testImplementation 'org.springframework.kafka:spring-kafka-test'
+    testImplementation 'com.h2database:h2'
+
     runtimeOnly 'org.postgresql:postgresql'
 }
