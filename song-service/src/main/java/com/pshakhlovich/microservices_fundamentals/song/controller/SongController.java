@@ -5,6 +5,7 @@ import com.pshakhlovich.microservices_fundamentals.song.model.SongMetadata;
 import com.pshakhlovich.microservices_fundamentals.song.service.SongService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,7 +25,7 @@ public class SongController {
     return songService.fetchMetadata(id);
   }
 
-  @PostMapping()
+  @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
   public IdWrapper<Integer> createSongMetadata(@RequestBody SongMetadata songMetadata) {
     return new IdWrapper<>(songService.createMetadata(songMetadata));
   }

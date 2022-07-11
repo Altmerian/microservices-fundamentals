@@ -28,6 +28,7 @@ import java.time.Duration;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
+import java.util.concurrent.CountDownLatch;
 
 @Service
 @RequiredArgsConstructor
@@ -38,10 +39,12 @@ public class ResourceProcessorService {
   private final SongClient songClient;
   private final ObjectMapper objectMapper;
 
+  private final CountDownLatch latch = new CountDownLatch(1);
+
   @Transactional
   @KafkaListener(
       id = "res-process-1",
-      topics = "resource-upload",
+      topics = "${kafka.resource-topic}",
       containerFactory = "kafkaListenerContainerFactory")
   public void processUploadEvent(String message) throws JsonProcessingException {
 
@@ -74,6 +77,7 @@ public class ResourceProcessorService {
 
     var songMetadataId = songClient.storeSongMetadata(songMetadata);
     log.info("Song metadata has been persisted with id=" + songMetadataId);
+    latch.countDown();
   }
 
   private String formatDuration(String input) {
@@ -91,5 +95,9 @@ public class ResourceProcessorService {
     return (metadata.get("xmpDM:releaseDate") != null)
         ? Integer.valueOf(metadata.get("xmpDM:releaseDate"))
         : null;
+  }
+
+  public CountDownLatch getLatch() {
+    return latch;
   }
 }

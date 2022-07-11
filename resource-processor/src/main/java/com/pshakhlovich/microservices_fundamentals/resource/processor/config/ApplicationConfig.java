@@ -1,5 +1,6 @@
 package com.pshakhlovich.microservices_fundamentals.resource.processor.config;
 
+import lombok.RequiredArgsConstructor;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.IntegerDeserializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -16,12 +17,16 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Configuration
+@RequiredArgsConstructor
+//@Profile("!test")
 public class ApplicationConfig {
+
+  private final KafkaProperties kafkaProperties;
 
   @Bean
   public ConsumerFactory<Integer, String> consumerFactory() {
     Map<String, Object> configProps = new HashMap<>();
-    configProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9093");
+    configProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaProperties.getBootstrapAddress());
     configProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, IntegerDeserializer.class);
     configProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
     configProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
