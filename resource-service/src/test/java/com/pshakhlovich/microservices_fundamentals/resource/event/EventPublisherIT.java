@@ -96,7 +96,7 @@ class EventPublisherIT {
   }
 
   @Test
-  void upload() throws JsonProcessingException {
+  void publishMessage() throws JsonProcessingException {
     // given
     var resourceMetadata =
         ResourceMetadata.builder()

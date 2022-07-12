@@ -1,8 +1,8 @@
 package com.pshakhlovich.microservices_fundamentals.resource.service;
 
-import com.pshakhlovich.microservices_fundamentals.resource.config.Mp3BucketProperties;
 import com.pshakhlovich.microservices_fundamentals.resource.dto.IdWrapper;
 import com.pshakhlovich.microservices_fundamentals.resource.event.EventPublisher;
+import com.pshakhlovich.microservices_fundamentals.resource.infrastructure.AwsS3Client;
 import com.pshakhlovich.microservices_fundamentals.resource.model.ResourceMetadata;
 import com.pshakhlovich.microservices_fundamentals.resource.repository.ResourceRepository;
 import com.pshakhlovich.microservices_fundamentals.resource.validator.Mp3FileValidator;
@@ -14,17 +14,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
-import software.amazon.awssdk.core.sync.RequestBody;
-import software.amazon.awssdk.core.waiters.WaiterResponse;
-import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.*;
 
-import javax.annotation.PostConstruct;
 import javax.validation.constraints.Size;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
@@ -33,8 +27,7 @@ import java.util.stream.Collectors;
 @Transactional
 public class ResourceService {
 
-  private final Mp3BucketProperties mp3BucketProperties;
-  private final S3Client s3Client;
+  private final AwsS3Client awsS3Client;
   private final ResourceRepository resourceRepository;
   private final Mp3FileValidator mp3FileValidator = new Mp3FileValidator();
   private final EventPublisher eventPublisher;
@@ -53,12 +46,7 @@ public class ResourceService {
             });
 
     try {
-      s3Client.putObject(
-          PutObjectRequest.builder()
-              .bucket(mp3BucketProperties.getBucketName())
-              .key(originalFilename)
-              .build(),
-          RequestBody.fromInputStream(multipartFile.getInputStream(), multipartFile.getSize()));
+      awsS3Client.uploadFile(multipartFile);
 
       String fileExtension = FilenameUtils.getExtension(originalFilename);
       var resourceMetadata =
@@ -72,35 +60,22 @@ public class ResourceService {
       eventPublisher.publish(resourceMetadata);
       return resourceId;
 
-    } catch (IOException | S3Exception e) {
+    } catch (IOException e) {
       throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage(), e);
     }
   }
 
   public byte[] download(Integer resourceId) {
-    try {
-      var resourceMetadata =
-          resourceRepository
-              .findById(resourceId)
-              .orElseThrow(
-                  () ->
-                      new ResponseStatusException(
-                          HttpStatus.NOT_FOUND,
-                          String.format("Resource with id=%d not found", resourceId)));
+    var resourceMetadata =
+        resourceRepository
+            .findById(resourceId)
+            .orElseThrow(
+                () ->
+                    new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        String.format("Resource with id=%d not found", resourceId)));
 
-      var getObjectRequest =
-          GetObjectRequest.builder()
-              .key(resourceMetadata.getFileName())
-              .bucket(mp3BucketProperties.getBucketName())
-              .build();
-
-      emulateAdditionalDelay();
-
-      return s3Client.getObjectAsBytes(getObjectRequest).asByteArray();
-
-    } catch (S3Exception e) {
-      throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage(), e);
-    }
+    return awsS3Client.downloadFile(resourceMetadata.getFileName());
   }
 
   public IdWrapper<int[]> delete(@Size List<Integer> ids) {
@@ -114,73 +89,12 @@ public class ResourceService {
     var idsByFileNamesToDelete =
         resourcesToDelete.stream()
             .collect(Collectors.toMap(ResourceMetadata::getFileName, ResourceMetadata::getId));
-    List<ObjectIdentifier> keys =
-        resourcesToDelete.stream()
-            .map(
-                resourceMetadata ->
-                    ObjectIdentifier.builder().key(resourceMetadata.getFileName()).build())
-            .toList();
-    var delete = Delete.builder().objects(keys).build();
 
-    try {
-      var multiObjectDeleteRequest =
-          DeleteObjectsRequest.builder()
-              .bucket(mp3BucketProperties.getBucketName())
-              .delete(delete)
-              .build();
-      var deleteObjectsResponse = s3Client.deleteObjects(multiObjectDeleteRequest);
-      resourceRepository.deleteAllById(idsByFileNamesToDelete.values());
-      return new IdWrapper<>(
-          deleteObjectsResponse.deleted().stream()
-              .map(DeletedObject::key)
-              .mapToInt(idsByFileNamesToDelete::get)
-              .sorted()
-              .toArray());
-    } catch (S3Exception e) {
-      throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage(), e);
-    }
-  }
+    resourceRepository.deleteAllById(idsByFileNamesToDelete.values());
 
-  @PostConstruct
-  private void createBucket() {
-    var bucketName = mp3BucketProperties.getBucketName();
-    if (!checkIfBucketExists(bucketName)) {
-      try {
-        var s3Waiter = s3Client.waiter();
-        CreateBucketRequest bucketRequest =
-            CreateBucketRequest.builder().bucket(bucketName).build();
+    List<String> removedObjectKeys = awsS3Client.removeFiles(idsByFileNamesToDelete.keySet());
 
-        s3Client.createBucket(bucketRequest);
-        HeadBucketRequest bucketRequestWait =
-            HeadBucketRequest.builder().bucket(bucketName).build();
-
-        // Wait until the bucket is created and print out the response.
-        WaiterResponse<HeadBucketResponse> waiterResponse =
-            s3Waiter.waitUntilBucketExists(bucketRequestWait);
-        waiterResponse.matched().response().ifPresent(System.out::println);
-        log.info(bucketName + " bucket has been created");
-
-      } catch (S3Exception e) {
-        System.err.println(e.awsErrorDetails().errorMessage());
-      }
-    }
-  }
-
-  private boolean checkIfBucketExists(String bucketName) {
-    HeadBucketRequest headBucketRequest = HeadBucketRequest.builder().bucket(bucketName).build();
-    try {
-      s3Client.headBucket(headBucketRequest);
-      return true;
-    } catch (NoSuchBucketException e) {
-      return false;
-    }
-  }
-
-  private void emulateAdditionalDelay() {
-    try {
-      TimeUnit.SECONDS.sleep(1);
-    } catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    }
+    return new IdWrapper<>(
+        removedObjectKeys.stream().mapToInt(idsByFileNamesToDelete::get).sorted().toArray());
   }
 }

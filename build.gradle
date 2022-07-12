@@ -2,6 +2,7 @@ plugins {
     id 'org.springframework.boot' version '2.7.0' apply false
     id 'io.spring.dependency-management' version '1.0.11.RELEASE'
     id 'java'
+    id 'jacoco'
 }
 
 jar {
@@ -23,6 +24,7 @@ subprojects {
     apply plugin: 'org.springframework.boot'
     apply plugin: 'io.spring.dependency-management'
     apply plugin: 'java'
+    apply plugin: 'jacoco'
 
     configurations {
         compileOnly {
@@ -38,6 +40,9 @@ subprojects {
         implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
         testImplementation 'org.springframework.boot:spring-boot-starter-test'
+        testImplementation "org.testcontainers:testcontainers:1.17.3"
+        testImplementation "org.testcontainers:junit-jupiter:1.17.3"
+
         testCompileOnly 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
     }
 
@@ -45,6 +50,8 @@ subprojects {
         useJUnitPlatform()
         environment "spring.profiles.active", "test"
     }
+
+    test.finalizedBy jacocoTestReport
 }
 
 

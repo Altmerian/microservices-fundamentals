@@ -28,7 +28,7 @@ public class ResourceController {
   @Value("${spring.profiles.active:}")
   private String activeProfiles;
 
-  @GetMapping("/{id}")
+  @GetMapping(value = "/{id}", produces = "audio/mpeg")
   public ResponseEntity<ByteArrayResource> download(@PathVariable Integer id) {
     if (activeProfiles.equalsIgnoreCase("dev")) {
       return emulateTransientFailure(id);
@@ -53,7 +53,7 @@ public class ResourceController {
   }
 
   @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-  public IdWrapper<Integer> uploadImage(@RequestParam("file") MultipartFile multipartFile) {
+  public IdWrapper<Integer> upload(@RequestParam("file") MultipartFile multipartFile) {
     Integer resourceId = resourceService.upload(multipartFile);
     return new IdWrapper<>(resourceId);
   }

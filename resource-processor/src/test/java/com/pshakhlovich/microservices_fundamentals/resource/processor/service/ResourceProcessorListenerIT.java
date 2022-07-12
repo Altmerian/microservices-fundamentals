@@ -50,7 +50,7 @@ import static org.mockito.Mockito.when;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @ExtendWith({OutputCaptureExtension.class, MockitoExtension.class})
 @DirtiesContext
-class ResourceProcessorServiceIT {
+class ResourceProcessorListenerIT {
 
   private static final String TEST_MP3_FILE_PATH = "test_data/file_example_MP3_5MG.mp3";
 
