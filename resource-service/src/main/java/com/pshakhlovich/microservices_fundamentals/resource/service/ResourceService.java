@@ -41,7 +41,7 @@ public class ResourceService {
         .ifPresent(
             metadata -> {
               throw new ResponseStatusException(
-                  HttpStatus.BAD_REQUEST,
+                  HttpStatus.CONFLICT,
                   String.format("Audio file with name '%s' already exists", originalFilename));
             });
 

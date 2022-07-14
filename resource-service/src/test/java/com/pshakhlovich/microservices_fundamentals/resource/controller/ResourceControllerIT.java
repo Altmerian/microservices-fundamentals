@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.pshakhlovich.microservices_fundamentals.resource.util.Constants.AUDIO_CONTENT_TYPE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -90,7 +91,7 @@ class ResourceControllerIT {
     var classPathResource = new ClassPathResource(TEST_MP3_FILE_PATH);
     byte[] fileContent = classPathResource.getInputStream().readAllBytes();
     var mockMultipartFile =
-        new MockMultipartFile("file", TEST_FILE_NAME, "audio/mpeg", fileContent);
+        new MockMultipartFile("file", TEST_FILE_NAME, AUDIO_CONTENT_TYPE, fileContent);
 
     Integer resourceId = resourceService.upload(mockMultipartFile);
     when(awsS3Client.downloadFile(TEST_FILE_NAME)).thenReturn(fileContent);
@@ -102,7 +103,7 @@ class ResourceControllerIT {
     var mvcResult =
         response
             .andExpect(status().isOk())
-            .andExpect(content().contentType("audio/mpeg"))
+            .andExpect(content().contentType(AUDIO_CONTENT_TYPE))
             .andReturn();
 
     assertThat(mvcResult.getResponse().getContentAsByteArray()).isEqualTo(fileContent);
@@ -129,7 +130,7 @@ class ResourceControllerIT {
     return new MockMultipartFile(
             "file",
             TEST_FILE_NAME,
-            "audio/mpeg",
+            AUDIO_CONTENT_TYPE,
             classPathResource.getInputStream().readAllBytes());
   }
 }

@@ -6,13 +6,15 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Objects;
 
+import static com.pshakhlovich.microservices_fundamentals.resource.util.Constants.AUDIO_CONTENT_TYPE;
+
 public class Mp3FileValidator {
 
   private static final String INVALID_FILE_CONTENT_TYPE = "Invalid file content type";
 
   public void checkContentIsValidMp3File(MultipartFile multipartFile) {
     Objects.requireNonNull(multipartFile.getContentType(), INVALID_FILE_CONTENT_TYPE);
-    if (!multipartFile.getContentType().equalsIgnoreCase("audio/mpeg")) {
+    if (!multipartFile.getContentType().equalsIgnoreCase(AUDIO_CONTENT_TYPE)) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, INVALID_FILE_CONTENT_TYPE);
     }
   }

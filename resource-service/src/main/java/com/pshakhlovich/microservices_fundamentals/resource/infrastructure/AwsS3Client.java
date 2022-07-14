@@ -73,7 +73,7 @@ public class AwsS3Client {
   }
 
   @PostConstruct
-  void createBucketIfNotExists() {
+  public void createBucketIfNotExists() {
     var bucketName = mp3BucketProperties.getBucketName();
     if (!checkIfBucketExists(bucketName)) {
       try {

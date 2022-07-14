@@ -3,7 +3,7 @@ package com.pshakhlovich.microservices_fundamentals.resource.controller;
 import com.pshakhlovich.microservices_fundamentals.resource.dto.IdWrapper;
 import com.pshakhlovich.microservices_fundamentals.resource.service.ResourceService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -13,8 +13,11 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Size;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import static com.pshakhlovich.microservices_fundamentals.resource.util.Constants.AUDIO_CONTENT_TYPE;
 
 @RestController
 @RequestMapping("/resources")
@@ -25,12 +28,12 @@ public class ResourceController {
 
   private final ResourceService resourceService;
 
-  @Value("${spring.profiles.active:}")
-  private String activeProfiles;
+  private final Environment environment;
 
-  @GetMapping(value = "/{id}", produces = "audio/mpeg")
+  @GetMapping(value = "/{id}", produces = AUDIO_CONTENT_TYPE)
   public ResponseEntity<ByteArrayResource> download(@PathVariable Integer id) {
-    if (activeProfiles.equalsIgnoreCase("dev")) {
+    if (Arrays.stream(environment.getActiveProfiles())
+        .anyMatch(activeProfile -> activeProfile.equalsIgnoreCase("dev"))) {
       return emulateTransientFailure(id);
     }
     return getResource(id);
@@ -48,7 +51,7 @@ public class ResourceController {
     var data = resourceService.download(id);
     return ResponseEntity.ok()
             .contentLength(data.length)
-            .header("Content-type", "audio/mpeg")
+            .header("Content-type", AUDIO_CONTENT_TYPE)
             .body(new ByteArrayResource(data));
   }
 

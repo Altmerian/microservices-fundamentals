@@ -1,6 +1,7 @@
 package com.pshakhlovich.microservices_fundamentals.resource.infrastructure;
 
 import com.pshakhlovich.microservices_fundamentals.resource.config.Mp3BucketProperties;
+import com.pshakhlovich.microservices_fundamentals.resource.testcontainer.ContainerBase;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -10,10 +11,6 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.mock.web.MockMultipartFile;
-import org.testcontainers.containers.localstack.LocalStackContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.utility.DockerImageName;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -26,23 +23,18 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 
+import static com.pshakhlovich.microservices_fundamentals.resource.util.Constants.AUDIO_CONTENT_TYPE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.testcontainers.containers.localstack.LocalStackContainer.Service.S3;
 
-@Testcontainers
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.NONE,
     classes = Mp3BucketProperties.class)
 @EnableConfigurationProperties(Mp3BucketProperties.class)
-public class AwsS3ClientIT {
+public class AwsS3ClientIT extends ContainerBase {
 
   private static final String TEST_MP3_FILE_PATH = "test_data/file_example_MP3_5MG.mp3";
   private static final String TEST_FILE_NAME = "file_example_MP3_5MG.mp3";
-
-  @Container
-  private static final LocalStackContainer localstack =
-      new LocalStackContainer(DockerImageName.parse("localstack/localstack:0.14.5"))
-          .withServices(S3);
 
   private static S3Client s3Client;
 
@@ -82,7 +74,7 @@ public class AwsS3ClientIT {
         new MockMultipartFile(
             "file",
             TEST_FILE_NAME,
-            "audio/mpeg",
+            AUDIO_CONTENT_TYPE,
             classPathResource.getInputStream().readAllBytes());
 
     // when
@@ -106,7 +98,7 @@ public class AwsS3ClientIT {
             new MockMultipartFile(
                     "file",
                     TEST_FILE_NAME,
-                    "audio/mpeg",
+                    AUDIO_CONTENT_TYPE,
                     classPathResource.getInputStream().readAllBytes());
 
     s3Client.putObject(
@@ -131,7 +123,7 @@ public class AwsS3ClientIT {
             new MockMultipartFile(
                     "file",
                     TEST_FILE_NAME,
-                    "audio/mpeg",
+                    AUDIO_CONTENT_TYPE,
                     classPathResource.getInputStream().readAllBytes());
 
     s3Client.putObject(
