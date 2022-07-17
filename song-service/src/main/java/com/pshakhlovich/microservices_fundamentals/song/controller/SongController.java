@@ -20,7 +20,7 @@ public class SongController {
 
   private final SongService songService;
 
-  @GetMapping("/{id}")
+  @GetMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
   public SongMetadata getSongMetadata(@PathVariable Integer id) {
     return songService.fetchMetadata(id);
   }
@@ -30,7 +30,7 @@ public class SongController {
     return new IdWrapper<>(songService.createMetadata(songMetadata));
   }
 
-  @DeleteMapping("/{ids}")
+  @DeleteMapping(value = "/{ids}", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<IdWrapper<List<Integer>>> deleteSongMetadata(
       @PathVariable @NotBlank @Size(max = 200) List<Integer> ids) {
     IdWrapper<List<Integer>> deletedIds = songService.delete(ids);

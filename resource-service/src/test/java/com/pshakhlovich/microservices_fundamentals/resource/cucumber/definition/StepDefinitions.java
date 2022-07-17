@@ -98,4 +98,9 @@ public class StepDefinitions {
   public void responseContainsFile(long fileSize) {
     assertThat(response.asByteArray().length).isEqualTo(fileSize);
   }
+
+  @When("User deletes resource with id={int}")
+  public void userDeletesResourceWithId(int resourceId) {
+    response = resourceClient.deleteResource(resourceId);
+  }
 }

@@ -1,8 +1,49 @@
+plugins {
+    id "org.springframework.cloud.contract" version '3.1.3'
+    id 'maven-publish'
+}
+
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.hibernate:hibernate-validator:7.0.4.Final'
 
     testImplementation 'com.h2database:h2'
+    testImplementation 'org.springframework.cloud:spring-cloud-starter-contract-verifier:3.1.3'
 
     runtimeOnly 'org.postgresql:postgresql'
+}
+
+contracts {
+    baseClassForTests = 'org.mycompany.tests'
+}
+
+contractTest {
+    useJUnitPlatform()
+}
+
+sourceSets {
+    contractTest {
+        java {
+            srcDir '/src/contractTest/java'
+        }
+    }
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            artifact bootJar
+            artifact verifierStubsJar
+
+            // https://github.com/spring-gradle-plugins/dependency-management-plugin/issues/273
+            versionMapping {
+                usage("java-api") {
+                    fromResolutionOf("runtimeClasspath")
+                }
+                usage("java-runtime") {
+                    fromResolutionResult()
+                }
+            }
+        }
+    }
 }

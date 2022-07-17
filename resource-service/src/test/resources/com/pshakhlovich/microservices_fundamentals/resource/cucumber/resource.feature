@@ -26,3 +26,14 @@ Feature: Store, track, and delete Mp3 files (Resources)
     Then Application response status is 200
     And Response content type is "audio/mpeg"
     And Response contains file with size in bytes 5289384
+
+  Scenario: Delete existing resource by id
+    Given The following Resources exist in the system:
+      | fileName                 | id |
+      | file_example_MP3_5MG.mp3 | 3  |
+    When User deletes resource with id=3
+    Then Application response status is 200
+    And Response contains:
+      """
+      {"ids": 3}
+      """

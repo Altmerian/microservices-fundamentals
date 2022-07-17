@@ -41,4 +41,8 @@ public class ResourceClient {
   public MockMvcResponse downloadResource(int resourceId) {
     return given().get(RESOURCES_BASE_PATH + "/{id}", resourceId);
   }
+
+  public MockMvcResponse deleteResource(int resourceId) {
+    return given().delete(RESOURCES_BASE_PATH + "/{id}", resourceId);
+  }
 }
