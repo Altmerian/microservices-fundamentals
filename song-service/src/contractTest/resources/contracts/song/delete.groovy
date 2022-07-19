@@ -5,17 +5,14 @@ import org.springframework.cloud.contract.spec.Contract;
 Contract.make {
     request {
         method DELETE()
-        url value(consumer(regex('/songs/\\d+(,\\d+)*')))
+        url value(consumer(regex('/songs/1')))
         headers {
             contentType('application/json')
         }
     }
     response {
-        status CREATED()
-        body(ids: 1)
-        bodyMatchers {
-            jsonPath('$.ids', byRegex('\\d+(,\\d+)*)'))
-        }
+        status OK()
+        body(ids: [1])
         headers {
             contentType('application/json')
         }

@@ -1,3 +1,19 @@
+pluginManagement {
+    repositories {
+        mavenCentral()
+        mavenLocal()
+        maven { url 'https://repo.spring.io/snapshot' }
+        maven { url 'https://repo.spring.io/milestone' }
+        maven { url 'https://repo.spring.io/release' }
+        gradlePluginPortal()
+    }
+    plugins {
+        id 'org.springframework.boot' version bootVersion
+        id 'io.spring.dependency-management' version '1.0.12.RELEASE'
+        id 'org.springframework.cloud.contract' version verifierVersion
+    }
+}
+
 rootProject.name = 'microservices_fundamentals'
 include 'resource-processor'
 include 'resource-service'

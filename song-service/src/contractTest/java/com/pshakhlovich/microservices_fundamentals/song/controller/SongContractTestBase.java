@@ -11,6 +11,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.when;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK, classes = SongController.class)
@@ -25,14 +26,18 @@ public class SongContractTestBase {
   @BeforeEach
   void setup() {
     RestAssuredMockMvc.standaloneSetup(songController);
+
     when(songService.createMetadata(getSong())).thenReturn(SONG_ID);
-    when(songService.fetchMetadata(SONG_ID)).thenReturn(getSong());
+
+    var songMetadataGet = getSong();
+    songMetadataGet.setId(SONG_ID);
+    when(songService.fetchMetadata(anyInt())).thenReturn(songMetadataGet);
+
     when(songService.delete(List.of(SONG_ID))).thenReturn(new IdWrapper<>(List.of(SONG_ID)));
   }
 
   private SongMetadata getSong() {
     return SongMetadata.builder()
-        .id(SONG_ID)
         .album("News of the world")
         .artist("Queen")
         .name("We are the champions")

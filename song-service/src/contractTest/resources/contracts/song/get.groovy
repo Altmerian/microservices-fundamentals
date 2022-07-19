@@ -16,8 +16,8 @@ Contract.make {
             name: "We are the champions",
             artist: "Queen",
             album: "News of the world",
-            length: "2:49",
-            resourceId: 7,
+            length: "2:59",
+            resourceId: 1,
             year: 1977
         )
         headers {

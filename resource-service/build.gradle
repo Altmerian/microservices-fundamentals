@@ -13,7 +13,5 @@ dependencies {
     testImplementation 'com.amazonaws:aws-java-sdk-s3:1.12.257'
     testImplementation "org.testcontainers:localstack:1.17.3"
 
-
-
     runtimeOnly 'org.postgresql:postgresql'
 }
