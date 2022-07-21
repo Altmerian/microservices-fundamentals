@@ -81,6 +81,7 @@ subprojects {
 
         filter {
             excludeTestsMatching "*.CucumberTest"
+            excludeTestsMatching "*.*ContractTest"
         }
 
         // Work around. Gradle does not include enough information to disambiguate
@@ -90,6 +91,19 @@ subprojects {
 
     test.finalizedBy jacocoTestReport
 
+    task consumerContractTest(type: Test, group: 'verification') {
+        useJUnitPlatform()
+        description = "Task to run contract tests"
+        environment "spring.profiles.active", "test"
+
+        testLogging {
+            events "passed", "skipped", "failed"
+            showStandardStreams = true
+        }
+
+        include("**/contract/**")
+    }
+
     task cucumber() {
         dependsOn assemble, testClasses
         doLast {
@@ -97,7 +111,7 @@ subprojects {
                 main = "io.cucumber.core.cli.Main"
                 classpath = configurations.cucumberRuntime + sourceSets.main.output + sourceSets.test.output
                 args = ['--plugin', 'pretty', '--glue', 'com.pshakhlovich.microservices_fundamentals', 'src/test/resources']
-                environment += [ 'CUCUMBER_PUBLISH_ENABLED': 'true', 'spring.profiles.active': 'test']
+                environment += ['CUCUMBER_PUBLISH_ENABLED': 'true', 'spring.profiles.active': 'test']
             }
         }
     }

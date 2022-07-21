@@ -1,6 +1,7 @@
 package com.pshakhlovich.microservices_fundamentals.resource.processor.infrastructure.resource;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpStatus;
@@ -25,6 +26,7 @@ public class ResourceClientImpl implements ResourceClient {
 
   private final RestTemplate restTemplate;
 
+  @Autowired
   public ResourceClientImpl(RestTemplateBuilder restTemplateBuilder) {
     this.restTemplate =
         restTemplateBuilder

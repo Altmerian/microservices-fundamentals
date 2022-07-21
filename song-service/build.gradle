@@ -31,6 +31,11 @@ contracts {
 
 contractTest {
     useJUnitPlatform()
+    finalizedBy(publishToMavenLocal, consumerContractTest)
+    testLogging {
+        events "passed", "skipped", "failed"
+        showStandardStreams = true
+    }
 }
 
 sourceSets {
