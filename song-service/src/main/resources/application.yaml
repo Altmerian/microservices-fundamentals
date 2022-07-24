@@ -6,7 +6,7 @@ server:
 
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5434/song-service-db
+    url: jdbc:postgresql://${SONG_DB_HOST:localhost}:${SONG_DB_PORT:5434}/song-service-db
     username: root
     password: Initial0
   jpa:

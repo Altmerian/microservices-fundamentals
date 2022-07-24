@@ -1,3 +1,7 @@
 kafka:
   resource-topic: resource-upload
-  bootstrap-address: localhost:9093
+  bootstrap-address: ${KAFKA_HOST:localhost}:${KAFKA_PORT:9093}
+
+infrastructure:
+  resource-service-url: ${resource_service_url:http://localhost:8081}
+  song-service-url: ${song_service_url:http://localhost:8082}

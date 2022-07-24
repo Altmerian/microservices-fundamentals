@@ -9,4 +9,4 @@ spring:
     enabled: false
 
 kafka:
-  bootstrap-address: localhost:9092
+  bootstrap-address: ${KAFKA_HOST:localhost}:9092

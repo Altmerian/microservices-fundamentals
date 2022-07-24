@@ -40,6 +40,44 @@ services:
     volumes:
       - kafka:/var/lib/kafka/data
 
+  resource-service:
+    image: microservices/resource-service:latest
+    build:
+      context: ../resource-service
+    env_file: resource-service.env
+    ports:
+      - 8081:8081
+    volumes:
+      - ~/.aws/:/root/.aws:ro
+    depends_on:
+      - resource-service-db
+      - kafka
+
+  resource-processor:
+    image: microservices/resource-processor:latest
+    build:
+      context: ../resource-processor
+    environment:
+      - resource_service_url=http://resource-service:8081
+      - song_service_url=http://song-service:8082
+      - KAFKA_HOST=kafka
+      - KAFKA_PORT=9092
+    ports:
+      - 8080:8080
+    depends_on:
+      - resource-service
+      - kafka
+
+  song-service:
+    image: microservices/song-service:latest
+    build:
+      context: ../song-service
+    env_file: song-service.env
+    ports:
+      - 8082:8082
+    depends_on:
+      - song-service-db
+
 volumes:
   resource-service-db:
   song-service-db:

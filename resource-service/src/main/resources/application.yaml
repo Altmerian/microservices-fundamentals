@@ -21,7 +21,7 @@ spring:
     activate:
       on-profile: dev
   datasource:
-    url: jdbc:postgresql://localhost:5433/resource-service-db
+    url: jdbc:postgresql://${RESOURCE_DB_HOST:localhost}:${RESOURCE_DB_PORT:5433}/resource-service-db
     username: root
     password: Initial0
   liquibase:
@@ -34,4 +34,4 @@ spring:
       max-request-size: 10MB
 
 kafka:
-  bootstrap-address: localhost:9093
+  bootstrap-address: ${KAFKA_HOST:localhost}:${KAFKA_PORT:9093}
