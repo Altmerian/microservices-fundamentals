@@ -41,9 +41,10 @@ services:
       - kafka:/var/lib/kafka/data
 
   resource-service:
-    image: microservices/resource-service:latest
     build:
       context: ../resource-service
+      args:
+        JAR_FILE: build/libs/resource-service.jar
     env_file: resource-service.env
     ports:
       - 8081:8081
@@ -54,9 +55,10 @@ services:
       - kafka
 
   resource-processor:
-    image: microservices/resource-processor:latest
     build:
       context: ../resource-processor
+      args:
+        JAR_FILE: build/libs/resource-processor.jar
     environment:
       - resource_service_url=http://resource-service:8081
       - song_service_url=http://song-service:8082
@@ -69,9 +71,10 @@ services:
       - kafka
 
   song-service:
-    image: microservices/song-service:latest
     build:
       context: ../song-service
+      args:
+        JAR_FILE: build/libs/song-service.jar
     env_file: song-service.env
     ports:
       - 8082:8082
