@@ -50,6 +50,23 @@ services:
       - 8761:8761
     env_file: .env
 
+  api-gateway-service:
+    build:
+      context: ../api-gateway-service
+      args:
+        JAR_FILE: build/libs/api-gateway-service.jar
+    hostname: eureka-discovery-service
+    ports:
+      - 8090:8090
+    env_file:
+      - api-gateway.env
+      - .env
+    depends_on:
+      - eureka-discovery-service
+      - resource-service
+      - song-service
+      - resource-processor
+
   resource-service:
     build:
       context: ../resource-service
