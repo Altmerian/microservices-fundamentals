@@ -3,5 +3,19 @@ kafka:
   bootstrap-address: ${KAFKA_HOST:localhost}:${KAFKA_PORT:9093}
 
 infrastructure:
-  resource-service-url: ${resource_service_url:http://localhost:8081}
-  song-service-url: ${song_service_url:http://localhost:8082}
+  resource-service-id: ${resource_service_id:resource-service}
+  song-service-id: ${song_service_id:song-service}
+
+eureka:
+  instance:
+    hostname: ${RESOURCE_PROCESSOR_HOST:localhost}
+    preferIpAddress: false
+    statusPageUrlPath: /actuator/info
+    healthCheckUrlPath: /actuator/health
+  client:
+    serviceUrl:
+      defaultZone: http://${EUREKA_HOST:localhost}:${EUREKA_PORT:8761}/eureka/
+
+spring:
+  application:
+    name: resource-processor

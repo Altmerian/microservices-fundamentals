@@ -6,6 +6,8 @@ server:
 spring:
   profiles:
     active: dev
+  application:
+    name: resource-service
 
 kafka:
   resource-topic: resource-upload
@@ -14,6 +16,15 @@ s3:
   bucket-name: pavel-shakhlovich-mp3
   region: eu-central-1
 
+eureka:
+  instance:
+    hostname: ${RESOURCE_SERVICE_HOST:localhost}
+    preferIpAddress: false
+    statusPageUrlPath: /actuator/info
+    healthCheckUrlPath: /actuator/health
+  client:
+    serviceUrl:
+      defaultZone: http://${EUREKA_HOST:localhost}:${EUREKA_PORT:8761}/eureka/
 ---
 
 spring:

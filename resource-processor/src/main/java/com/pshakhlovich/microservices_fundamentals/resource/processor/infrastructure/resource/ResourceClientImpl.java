@@ -4,6 +4,8 @@ import com.pshakhlovich.microservices_fundamentals.resource.processor.infrastruc
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.cloud.client.ServiceInstance;
+import org.springframework.cloud.client.loadbalancer.LoadBalancerClient;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.retry.annotation.Backoff;
@@ -27,15 +29,17 @@ public class ResourceClientImpl implements ResourceClient {
 
   private final RestTemplate restTemplate;
   private final ExternalClientProperties clientProperties;
+  private final LoadBalancerClient loadBalancer;
 
   @Autowired
-  public ResourceClientImpl(RestTemplateBuilder restTemplateBuilder, ExternalClientProperties clientProperties) {
+  public ResourceClientImpl(RestTemplateBuilder restTemplateBuilder, ExternalClientProperties clientProperties, LoadBalancerClient loadBalancer) {
     this.restTemplate =
         restTemplateBuilder
             .setConnectTimeout(CONNECTION_TIMEOUT)
             .setReadTimeout(CONNECTION_TIMEOUT)
             .build();
     this.clientProperties = clientProperties;
+    this.loadBalancer = loadBalancer;
   }
 
   @Override
@@ -45,8 +49,10 @@ public class ResourceClientImpl implements ResourceClient {
       listeners = "resourceClientRetryListener")
   public ByteArrayResource getResource(Integer resourceId) {
     try {
-      System.out.println(clientProperties.getResourceServiceUrl() + RESOURCE_BASE_URL + resourceId);
-      return restTemplate.getForObject(clientProperties.getResourceServiceUrl() + RESOURCE_BASE_URL + resourceId, ByteArrayResource.class);
+      ServiceInstance resourceServiceInstance = loadBalancer.choose(clientProperties.getResourceServiceId());
+      var baseUrl = resourceServiceInstance.getUri().toString();
+
+      return restTemplate.getForObject(baseUrl + RESOURCE_BASE_URL + resourceId, ByteArrayResource.class);
     } catch (RestClientException e) {
       throw new ResponseStatusException(
           HttpStatus.INTERNAL_SERVER_ERROR, "Failed to get resource from 'resource-service'", e);

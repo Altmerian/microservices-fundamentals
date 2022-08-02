@@ -1,6 +1,5 @@
 package com.pshakhlovich.microservices_fundamentals.resource.processor.infrastructure.contract;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pshakhlovich.microservices_fundamentals.resource.processor.domain.SongMetadata;
 import com.pshakhlovich.microservices_fundamentals.resource.processor.dto.IdWrapper;
 import com.pshakhlovich.microservices_fundamentals.resource.processor.infrastructure.config.ExternalClientProperties;

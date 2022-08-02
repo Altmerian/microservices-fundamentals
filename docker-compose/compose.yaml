@@ -40,12 +40,24 @@ services:
     volumes:
       - kafka:/var/lib/kafka/data
 
+  eureka-discovery-service:
+    build:
+      context: ../eureka-discovery-service
+      args:
+        JAR_FILE: build/libs/eureka-discovery-service.jar
+    hostname: eureka-discovery-service
+    ports:
+      - 8761:8761
+    env_file: .env
+
   resource-service:
     build:
       context: ../resource-service
       args:
         JAR_FILE: build/libs/resource-service.jar
-    env_file: resource-service.env
+    env_file:
+      - resource-service.env
+      - .env
     ports:
       - 8081:8081
     volumes:
@@ -53,33 +65,36 @@ services:
     depends_on:
       - resource-service-db
       - kafka
+      - eureka-discovery-service
 
   resource-processor:
     build:
       context: ../resource-processor
       args:
         JAR_FILE: build/libs/resource-processor.jar
-    environment:
-      - resource_service_url=http://resource-service:8081
-      - song_service_url=http://song-service:8082
-      - KAFKA_HOST=kafka
-      - KAFKA_PORT=9092
+    env_file:
+      - resource-processor.env
+      - .env
     ports:
       - 8080:8080
     depends_on:
       - resource-service
       - kafka
+      - eureka-discovery-service
 
   song-service:
     build:
       context: ../song-service
       args:
         JAR_FILE: build/libs/song-service.jar
-    env_file: song-service.env
+    env_file:
+      - song-service.env
+      - .env
     ports:
       - 8082:8082
     depends_on:
       - song-service-db
+      - eureka-discovery-service
 
 volumes:
   resource-service-db:

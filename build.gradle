@@ -26,6 +26,7 @@ ext {
     testcontainersVersion = '1.17.3'
     cucumberVersion = '7.4.1'
     junitVersion = '5.8.2'
+    springCloudVersion = "${BOM_VERSION}"
 }
 
 subprojects {
@@ -82,7 +83,7 @@ subprojects {
 
         filter {
             excludeTestsMatching "*.CucumberTest"
-            excludeTestsMatching "*.*ContractTest"
+            excludeTestsMatching "*.*ContractTest*"
         }
 
         // Work around. Gradle does not include enough information to disambiguate

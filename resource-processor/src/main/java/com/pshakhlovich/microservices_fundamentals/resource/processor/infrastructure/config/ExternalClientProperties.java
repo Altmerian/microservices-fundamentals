@@ -11,6 +11,6 @@ import org.springframework.stereotype.Component;
 @Component
 public class ExternalClientProperties {
 
-  private String resourceServiceUrl;
-  private String songServiceUrl;
+  private String resourceServiceId;
+  private String songServiceId;
 }

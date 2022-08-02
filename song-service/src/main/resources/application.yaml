@@ -3,7 +3,6 @@ server:
   error:
     include-message: always
 
-
 spring:
   datasource:
     url: jdbc:postgresql://${SONG_DB_HOST:localhost}:${SONG_DB_PORT:5434}/song-service-db
@@ -15,3 +14,15 @@ spring:
   jackson:
     serialization:
       write-durations-as-timestamps: false
+  application:
+    name: song-service
+
+eureka:
+  instance:
+    hostname: ${SONG_SERVICE_HOST:localhost}
+    preferIpAddress: false
+    statusPageUrlPath: /actuator/info
+    healthCheckUrlPath: /actuator/health
+  client:
+    serviceUrl:
+      defaultZone: http://${EUREKA_HOST:localhost}:${EUREKA_PORT:8761}/eureka/

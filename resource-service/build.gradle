@@ -7,6 +7,7 @@ dependencies {
     implementation 'commons-io:commons-io:2.11.0'
     implementation 'org.hibernate:hibernate-validator:7.0.4.Final'
     implementation 'org.springframework.kafka:spring-kafka'
+    implementation "org.springframework.cloud:spring-cloud-starter-netflix-eureka-client"
 
     testImplementation 'org.springframework.kafka:spring-kafka-test'
     testImplementation 'com.h2database:h2'
@@ -14,4 +15,10 @@ dependencies {
     testImplementation "org.testcontainers:localstack:1.17.3"
 
     runtimeOnly 'org.postgresql:postgresql'
+}
+
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+    }
 }
