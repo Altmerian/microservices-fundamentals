@@ -55,7 +55,6 @@ services:
       context: ../api-gateway-service
       args:
         JAR_FILE: build/libs/api-gateway-service.jar
-    hostname: eureka-discovery-service
     ports:
       - 8090:8090
     env_file:
@@ -75,8 +74,8 @@ services:
     env_file:
       - resource-service.env
       - .env
-    ports:
-      - 8081:8081
+#    ports:
+#      - 8081:8081
     volumes:
       - ~/.aws/:/root/.aws:ro
     depends_on:
@@ -92,8 +91,8 @@ services:
     env_file:
       - resource-processor.env
       - .env
-    ports:
-      - 8080:8080
+#    ports:
+#      - 8080:8080
     depends_on:
       - resource-service
       - kafka
@@ -107,8 +106,8 @@ services:
     env_file:
       - song-service.env
       - .env
-    ports:
-      - 8082:8082
+#    ports:
+#      - 8082:8082
     depends_on:
       - song-service-db
       - eureka-discovery-service

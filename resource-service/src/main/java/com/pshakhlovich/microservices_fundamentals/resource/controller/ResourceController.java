@@ -13,11 +13,11 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Size;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.pshakhlovich.microservices_fundamentals.resource.util.Constants.AUDIO_CONTENT_TYPE;
+import static com.pshakhlovich.microservices_fundamentals.resource.util.Constants.EMULATE_TRANSIENT_ERROR_ENV_VARIABLE;
 
 @RestController
 @RequestMapping("/resources")
@@ -32,8 +32,7 @@ public class ResourceController {
 
   @GetMapping(value = "/{id}", produces = AUDIO_CONTENT_TYPE)
   public ResponseEntity<ByteArrayResource> download(@PathVariable Integer id) {
-    if (Arrays.stream(environment.getActiveProfiles())
-        .anyMatch(activeProfile -> activeProfile.equalsIgnoreCase("dev"))) {
+    if ((Boolean.parseBoolean(environment.getProperty(EMULATE_TRANSIENT_ERROR_ENV_VARIABLE)))) {
       return emulateTransientFailure(id);
     }
     return getResource(id);
