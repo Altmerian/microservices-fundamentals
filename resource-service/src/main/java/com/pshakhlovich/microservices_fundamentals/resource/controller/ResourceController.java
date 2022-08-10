@@ -3,6 +3,7 @@ package com.pshakhlovich.microservices_fundamentals.resource.controller;
 import com.pshakhlovich.microservices_fundamentals.resource.dto.IdWrapper;
 import com.pshakhlovich.microservices_fundamentals.resource.service.ResourceService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.env.Environment;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpStatus;
@@ -22,6 +23,7 @@ import static com.pshakhlovich.microservices_fundamentals.resource.util.Constant
 @RestController
 @RequestMapping("/resources")
 @RequiredArgsConstructor
+@Slf4j
 public class ResourceController {
 
   private final AtomicInteger failuresNumber = new AtomicInteger(0);
@@ -33,6 +35,7 @@ public class ResourceController {
   @GetMapping(value = "/{id}", produces = AUDIO_CONTENT_TYPE)
   public ResponseEntity<ByteArrayResource> download(@PathVariable Integer id) {
     if ((Boolean.parseBoolean(environment.getProperty(EMULATE_TRANSIENT_ERROR_ENV_VARIABLE)))) {
+      log.info("Emulating internal server error. Failure number=" + failuresNumber.get());
       return emulateTransientFailure(id);
     }
     return getResource(id);

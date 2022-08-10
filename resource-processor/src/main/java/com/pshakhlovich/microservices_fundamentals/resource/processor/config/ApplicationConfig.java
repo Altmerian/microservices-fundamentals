@@ -18,7 +18,6 @@ import java.util.Map;
 
 @Configuration
 @RequiredArgsConstructor
-//@Profile("!test")
 public class ApplicationConfig {
 
   private final KafkaProperties kafkaProperties;
