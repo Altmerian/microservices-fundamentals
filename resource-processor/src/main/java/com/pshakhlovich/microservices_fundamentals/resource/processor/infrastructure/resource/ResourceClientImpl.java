@@ -1,5 +1,6 @@
 package com.pshakhlovich.microservices_fundamentals.resource.processor.infrastructure.resource;
 
+import com.pshakhlovich.microservices_fundamentals.resource.processor.dto.ReUploadDto;
 import com.pshakhlovich.microservices_fundamentals.resource.processor.infrastructure.config.ExternalClientProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -7,6 +8,8 @@ import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.cloud.client.ServiceInstance;
 import org.springframework.cloud.client.loadbalancer.LoadBalancerClient;
 import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
@@ -57,5 +60,14 @@ public class ResourceClientImpl implements ResourceClient {
       throw new ResponseStatusException(
           HttpStatus.INTERNAL_SERVER_ERROR, "Failed to get resource from 'resource-service'", e);
     }
+  }
+
+  @Override
+  public void reUpload(ReUploadDto reUploadDto) {
+    ServiceInstance resourceServiceInstance = loadBalancer.choose(clientProperties.getResourceServiceId());
+    var baseUrl = resourceServiceInstance.getUri().toString();
+
+    HttpEntity<ReUploadDto> entity = new HttpEntity<>(reUploadDto);
+    restTemplate.exchange(baseUrl + RESOURCE_BASE_URL, HttpMethod.PUT, entity, Void.class);
   }
 }

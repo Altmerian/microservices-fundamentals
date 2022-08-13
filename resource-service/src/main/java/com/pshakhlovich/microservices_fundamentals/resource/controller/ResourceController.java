@@ -1,6 +1,7 @@
 package com.pshakhlovich.microservices_fundamentals.resource.controller;
 
 import com.pshakhlovich.microservices_fundamentals.resource.dto.IdWrapper;
+import com.pshakhlovich.microservices_fundamentals.resource.dto.ReUploadDto;
 import com.pshakhlovich.microservices_fundamentals.resource.service.ResourceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -61,6 +62,12 @@ public class ResourceController {
   public IdWrapper<Integer> upload(@RequestParam("file") MultipartFile multipartFile) {
     Integer resourceId = resourceService.upload(multipartFile);
     return new IdWrapper<>(resourceId);
+  }
+
+  @PutMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<Void> reUpload(@RequestBody ReUploadDto reUploadDto) {
+    resourceService.reUpload(reUploadDto);
+    return new ResponseEntity<>(HttpStatus.NO_CONTENT);
   }
 
   @DeleteMapping("/{ids}")

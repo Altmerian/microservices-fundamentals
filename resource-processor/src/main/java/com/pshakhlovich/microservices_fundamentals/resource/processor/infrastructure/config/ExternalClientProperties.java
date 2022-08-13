@@ -13,4 +13,5 @@ public class ExternalClientProperties {
 
   private String resourceServiceId;
   private String songServiceId;
+  private String storageServiceId;
 }

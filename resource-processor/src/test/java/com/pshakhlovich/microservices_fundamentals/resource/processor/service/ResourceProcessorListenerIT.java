@@ -4,8 +4,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pshakhlovich.microservices_fundamentals.resource.processor.config.KafkaProperties;
 import com.pshakhlovich.microservices_fundamentals.resource.processor.domain.ResourceMetadata;
 import com.pshakhlovich.microservices_fundamentals.resource.processor.domain.SongMetadata;
+import com.pshakhlovich.microservices_fundamentals.resource.processor.dto.StorageMetadataDto;
+import com.pshakhlovich.microservices_fundamentals.resource.processor.dto.StorageMetadataDto.StorageType;
 import com.pshakhlovich.microservices_fundamentals.resource.processor.infrastructure.resource.ResourceClient;
 import com.pshakhlovich.microservices_fundamentals.resource.processor.infrastructure.song.SongClient;
+import com.pshakhlovich.microservices_fundamentals.resource.processor.infrastructure.storage.StorageClient;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.jupiter.api.AfterEach;
@@ -53,6 +56,7 @@ import static org.mockito.Mockito.when;
 class ResourceProcessorListenerIT {
 
   private static final String TEST_MP3_FILE_PATH = "test_data/file_example_MP3_5MG.mp3";
+  private static final String BUCKET_NAME = "test-bucket";
 
   private static final int RESOURCE_ID = 1;
   private static final Integer SONG_METADATA_ID = 1;
@@ -70,6 +74,8 @@ class ResourceProcessorListenerIT {
   @Autowired private ObjectMapper objectMapper;
 
   @MockBean private ResourceClient resourceClient;
+
+  @MockBean private StorageClient storageClient;
 
   @MockBean private SongClient songClient;
 
@@ -122,6 +128,8 @@ class ResourceProcessorListenerIT {
 
     when(songClient.storeSongMetadata(any(SongMetadata.class))).thenReturn(SONG_METADATA_ID);
 
+    when(storageClient.getPermanentStorage()).thenReturn(getPermanentStorage());
+
     // when
     producer.send(new ProducerRecord<>(topicName, 1, resourceMetadataJson));
 
@@ -130,5 +138,14 @@ class ResourceProcessorListenerIT {
     assertTrue(messageConsumed);
     assertThat(capturedOutput.getOut())
         .contains(LOG_MESSAGE_RECEIVED + resourceMetadataJson, LOG_SONG_METADATA_PERSISTED);
+  }
+
+  private StorageMetadataDto getPermanentStorage() {
+    return StorageMetadataDto.builder()
+            .id(1)
+            .storageType(StorageType.PERMANENT)
+            .bucket(BUCKET_NAME)
+            .path("permanent/")
+            .build();
   }
 }

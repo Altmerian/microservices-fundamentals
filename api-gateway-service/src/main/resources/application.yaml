@@ -17,6 +17,10 @@ spring:
           uri: lb://SONG-SERVICE
           predicates:
             - Path=/songs/**
+        - id: storageService
+          uri: lb://STORAGE-SERVICE
+          predicates:
+            - Path=/storages/**
 eureka:
   instance:
     hostname: ${API_GATEWAY_HOST:localhost}

@@ -5,18 +5,30 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.core.waiters.WaiterResponse;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.*;
+import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
+import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
+import software.amazon.awssdk.services.s3.model.Delete;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
+import software.amazon.awssdk.services.s3.model.DeletedObject;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
+import software.amazon.awssdk.services.s3.model.HeadBucketResponse;
+import software.amazon.awssdk.services.s3.model.NoSuchBucketException;
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 
-import javax.annotation.PostConstruct;
 import java.io.IOException;
-import java.util.Collection;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
@@ -26,55 +38,60 @@ public class AwsS3Client {
   private final Mp3BucketProperties mp3BucketProperties;
   private final S3Client s3Client;
 
-  public void uploadFile(MultipartFile multipartFile) throws IOException {
+  public void uploadFile(MultipartFile multipartFile, String bucketName, String path) throws IOException {
+    createBucketIfNotExists(bucketName);
+
     s3Client.putObject(
         PutObjectRequest.builder()
-            .bucket(mp3BucketProperties.getBucketName())
-            .key(multipartFile.getOriginalFilename())
+            .bucket(bucketName)
+            .key(path + multipartFile.getOriginalFilename())
             .build(),
         RequestBody.fromInputStream(multipartFile.getInputStream(), multipartFile.getSize()));
   }
 
-  public byte[] downloadFile(String fileName) {
+  public byte[] downloadFile(String bucketName, String fileKey) {
     try {
       var getObjectRequest =
           GetObjectRequest.builder()
-              .key(fileName)
-              .bucket(mp3BucketProperties.getBucketName())
+              .key(fileKey)
+              .bucket(bucketName)
               .build();
 
       return s3Client.getObjectAsBytes(getObjectRequest).asByteArray();
     } catch (S3Exception e) {
-      throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage(), e);
+      throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.awsErrorDetails().errorMessage(), e);
     }
   }
 
-  public List<String> removeFiles(Collection<String> fileNames) {
-    List<ObjectIdentifier> keys =
-        fileNames.stream()
-            .map(fileName -> ObjectIdentifier.builder().key(fileName).build())
-            .toList();
-    var delete = Delete.builder().objects(keys).build();
+  public List<String> removeFiles(MultiValueMap<String, String> fileKeysByBucketName) {
+    List<String> deletedIds = new ArrayList<>();
 
-    try {
-      var multiObjectDeleteRequest =
-          DeleteObjectsRequest.builder()
-              .bucket(mp3BucketProperties.getBucketName())
-              .delete(delete)
-              .build();
-      var deleteObjectsResponse = s3Client.deleteObjects(multiObjectDeleteRequest);
+    fileKeysByBucketName.forEach((bucketName, fileKeys) -> {
+      List<ObjectIdentifier> keys =
+              fileKeys.stream()
+                      .map(fileKey -> ObjectIdentifier.builder().key(fileKey).build())
+                      .toList();
+      var delete = Delete.builder().objects(keys).build();
 
-      return deleteObjectsResponse.deleted().stream()
-          .map(DeletedObject::key)
-          .collect(Collectors.toList());
-    } catch (S3Exception e) {
-      throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage(), e);
-    }
+      try {
+        var multiObjectDeleteRequest =
+                DeleteObjectsRequest.builder()
+                        .bucket(bucketName)
+                        .delete(delete)
+                        .build();
+        var deleteObjectsResponse = s3Client.deleteObjects(multiObjectDeleteRequest);
+
+        deletedIds.addAll(deleteObjectsResponse.deleted().stream()
+                .map(DeletedObject::key).toList());
+      } catch (S3Exception e) {
+        throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.awsErrorDetails().errorMessage(), e);
+      }
+    });
+
+    return  deletedIds;
   }
 
-  @PostConstruct
-  public void createBucketIfNotExists() {
-    var bucketName = mp3BucketProperties.getBucketName();
+  public void createBucketIfNotExists(String bucketName) {
     if (!checkIfBucketExists(bucketName)) {
       try {
         var s3Waiter = s3Client.waiter();
@@ -92,7 +109,7 @@ public class AwsS3Client {
         log.info(bucketName + " bucket has been created");
 
       } catch (S3Exception e) {
-        System.err.println(e.awsErrorDetails().errorMessage());
+        throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.awsErrorDetails().errorMessage(), e);
       }
     }
   }
@@ -104,6 +121,24 @@ public class AwsS3Client {
       return true;
     } catch (NoSuchBucketException e) {
       return false;
+    }
+  }
+
+  public void copyObject(String fromBucket, String fromPath, String toBucket, String toPath, String fileName) {
+
+    CopyObjectRequest copyReq = CopyObjectRequest.builder()
+            .sourceBucket(fromBucket)
+            .sourceKey(fromPath + fileName)
+            .destinationBucket(toBucket)
+            .destinationKey(toPath + fileName)
+            .build();
+
+    try {
+     s3Client.copyObject(copyReq);
+     removeFiles(new LinkedMultiValueMap<>(Map.of(fromBucket, List.of(fromPath + fileName))));
+
+    } catch (S3Exception e) {
+      throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.awsErrorDetails().errorMessage(), e);
     }
   }
 }

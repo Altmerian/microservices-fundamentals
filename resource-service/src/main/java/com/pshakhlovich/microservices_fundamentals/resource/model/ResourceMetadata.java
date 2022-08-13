@@ -33,4 +33,6 @@ public class ResourceMetadata implements Serializable {
   @Column private Long sizeInBytes;
 
   @Column private String fileExtension;
+
+  @Column private Integer storageId;
 }

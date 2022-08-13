@@ -27,6 +27,9 @@ s3:
   bucket-name: pavel-shakhlovich-mp3
   region: eu-central-1
 
+infrastructure:
+  storage-service-id: storage-service
+
 eureka:
   instance:
     hostname: ${RESOURCE_SERVICE_HOST:localhost}

@@ -11,6 +11,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.util.LinkedMultiValueMap;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -21,6 +22,7 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import static com.pshakhlovich.microservices_fundamentals.resource.util.Constants.AUDIO_CONTENT_TYPE;
@@ -35,6 +37,7 @@ public class AwsS3ClientIT extends ContainerBase {
 
   private static final String TEST_MP3_FILE_PATH = "test_data/file_example_MP3_5MG.mp3";
   private static final String TEST_FILE_NAME = "file_example_MP3_5MG.mp3";
+  private static final String STAGING_PATH = "staging/";
 
   private static S3Client s3Client;
 
@@ -63,7 +66,7 @@ public class AwsS3ClientIT extends ContainerBase {
   @BeforeEach
   void setUp() {
     awsS3Client = new AwsS3Client(mp3BucketProperties, s3Client);
-    awsS3Client.createBucketIfNotExists();
+    awsS3Client.createBucketIfNotExists(mp3BucketProperties.getBucketName());
   }
 
   @Test
@@ -78,12 +81,12 @@ public class AwsS3ClientIT extends ContainerBase {
             classPathResource.getInputStream().readAllBytes());
 
     // when
-    awsS3Client.uploadFile(mockMultipartFile);
+    awsS3Client.uploadFile(mockMultipartFile, mp3BucketProperties.getBucketName(), STAGING_PATH);
 
     // then
     var getObjectRequest =
         GetObjectRequest.builder()
-            .key(TEST_FILE_NAME)
+            .key(STAGING_PATH + TEST_FILE_NAME)
             .bucket(mp3BucketProperties.getBucketName())
             .build();
     int actualFileSize = s3Client.getObject(getObjectRequest).readAllBytes().length;
@@ -104,12 +107,12 @@ public class AwsS3ClientIT extends ContainerBase {
     s3Client.putObject(
             PutObjectRequest.builder()
                     .bucket(mp3BucketProperties.getBucketName())
-                    .key(TEST_FILE_NAME)
+                    .key(STAGING_PATH + TEST_FILE_NAME)
                     .build(),
             RequestBody.fromInputStream(mockMultipartFile.getInputStream(), mockMultipartFile.getSize()));
 
     // when
-    byte[] actualFile = awsS3Client.downloadFile(TEST_FILE_NAME);
+    byte[] actualFile = awsS3Client.downloadFile(mp3BucketProperties.getBucketName(), STAGING_PATH + TEST_FILE_NAME);
 
     // then
     assertThat(actualFile.length).isEqualTo(mockMultipartFile.getSize());
@@ -134,7 +137,8 @@ public class AwsS3ClientIT extends ContainerBase {
             RequestBody.fromInputStream(mockMultipartFile.getInputStream(), mockMultipartFile.getSize()));
 
     // when
-    List<String> removedObjectKeys = awsS3Client.removeFiles(Set.of(TEST_FILE_NAME));
+    List<String> removedObjectKeys = awsS3Client.removeFiles(
+            new LinkedMultiValueMap<>(Map.of(mp3BucketProperties.getBucketName(), List.of(TEST_FILE_NAME))));
 
     // then
     assertThat(removedObjectKeys).containsExactly(TEST_FILE_NAME);

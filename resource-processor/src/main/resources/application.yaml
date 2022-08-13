@@ -3,8 +3,9 @@ kafka:
   bootstrap-address: ${KAFKA_HOST:localhost}:${KAFKA_PORT:9093}
 
 infrastructure:
-  resource-service-id: ${resource_service_id:resource-service}
-  song-service-id: ${song_service_id:song-service}
+  resource-service-id: resource-service
+  song-service-id: song-service
+  storage-service-id: storage-service
 
 eureka:
   instance:

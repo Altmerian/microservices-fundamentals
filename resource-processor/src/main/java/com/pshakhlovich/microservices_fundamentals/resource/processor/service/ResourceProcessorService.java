@@ -4,8 +4,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pshakhlovich.microservices_fundamentals.resource.processor.domain.ResourceMetadata;
 import com.pshakhlovich.microservices_fundamentals.resource.processor.domain.SongMetadata;
+import com.pshakhlovich.microservices_fundamentals.resource.processor.dto.ReUploadDto;
+import com.pshakhlovich.microservices_fundamentals.resource.processor.dto.StorageMetadataDto;
 import com.pshakhlovich.microservices_fundamentals.resource.processor.infrastructure.resource.ResourceClient;
 import com.pshakhlovich.microservices_fundamentals.resource.processor.infrastructure.song.SongClient;
+import com.pshakhlovich.microservices_fundamentals.resource.processor.infrastructure.storage.StorageClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.tika.exception.TikaException;
@@ -37,6 +40,7 @@ public class ResourceProcessorService {
 
   private final ResourceClient resourceClient;
   private final SongClient songClient;
+  private final StorageClient storageClient;
   private final ObjectMapper objectMapper;
 
   private final CountDownLatch latch = new CountDownLatch(1);
@@ -77,6 +81,14 @@ public class ResourceProcessorService {
 
     var songMetadataId = songClient.storeSongMetadata(songMetadata);
     log.info("Song metadata has been persisted with id=" + songMetadataId);
+
+    StorageMetadataDto permanentStorage = storageClient.getPermanentStorage();
+    resourceClient.reUpload(
+            ReUploadDto.builder()
+                    .resourceId(resourceId)
+                    .storageMetadata(permanentStorage)
+            .build());
+
     latch.countDown();
   }
 

@@ -1,0 +1,25 @@
+server:
+  port: 8083
+  error:
+    include-message: always
+
+spring:
+  datasource:
+    url: jdbc:postgresql://${STORAGE_DB_HOST:localhost}:${STORAGE_DB_PORT:5435}/storage-service-db
+    username: root
+    password: Initial0
+  jpa:
+    show-sql: true
+    hibernate.ddl-auto: update
+  application:
+    name: storage-service
+
+eureka:
+  instance:
+    hostname: ${STORAGE_SERVICE_HOST:localhost}
+    preferIpAddress: false
+    statusPageUrlPath: /actuator/info
+    healthCheckUrlPath: /actuator/health
+  client:
+    serviceUrl:
+      defaultZone: http://${EUREKA_HOST:localhost}:${EUREKA_PORT:8761}/eureka/

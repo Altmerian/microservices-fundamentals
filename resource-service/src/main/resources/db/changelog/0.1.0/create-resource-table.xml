@@ -17,6 +17,7 @@
             <column name="file_name" type="VARCHAR(255)"/>
             <column name="size_in_bytes" type="BIGINT"/>
             <column name="file_extension" type="VARCHAR(10)"/>
+            <column name="storage_id" type="INT"/>
         </createTable>
 
         <addUniqueConstraint columnNames="file_name" constraintName="resource_file_name_unique_constraint"

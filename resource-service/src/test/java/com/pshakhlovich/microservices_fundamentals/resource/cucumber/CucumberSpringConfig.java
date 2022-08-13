@@ -49,7 +49,7 @@ public class CucumberSpringConfig extends ContainerBase {
             .region(Region.of(localstack.getRegion()))
             .build(); ) {
       awsS3Client = new AwsS3Client(mp3BucketProperties, s3Client);
-      awsS3Client.createBucketIfNotExists();
+      awsS3Client.createBucketIfNotExists(mp3BucketProperties.getBucketName());
     }
   }
 }
