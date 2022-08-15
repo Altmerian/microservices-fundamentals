@@ -27,6 +27,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 
 import java.io.IOException;
 import java.util.List;
@@ -127,6 +128,7 @@ class ResourceControllerIT {
   }
 
   @Test
+  @SuppressWarnings("unchecked")
   void deleteResource() throws Exception {
     // given
     var mockMultipartFile = getMockMultipartFile();
@@ -134,7 +136,7 @@ class ResourceControllerIT {
     StorageMetadataDto stagingStorage = getStagingStorage();
 
     when(storageClient.getStorageById(anyInt())).thenReturn(stagingStorage);
-    when(awsS3Client.removeFiles(any(LinkedMultiValueMap.class))).thenReturn(List.of(stagingStorage.getPath() + TEST_FILE_NAME));
+    when(awsS3Client.removeFiles(any(MultiValueMap.class))).thenReturn(List.of(stagingStorage.getPath() + TEST_FILE_NAME));
 
     // when
     var response = mockMvc.perform(delete(RESOURCE_BASE_PATH + "/{ids}", resourceId));

@@ -4,8 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pshakhlovich.microservices_fundamentals.resource.processor.config.KafkaProperties;
 import com.pshakhlovich.microservices_fundamentals.resource.processor.domain.ResourceMetadata;
 import com.pshakhlovich.microservices_fundamentals.resource.processor.domain.SongMetadata;
-import com.pshakhlovich.microservices_fundamentals.resource.processor.dto.StorageMetadataDto;
-import com.pshakhlovich.microservices_fundamentals.resource.processor.dto.StorageMetadataDto.StorageType;
+import com.pshakhlovich.microservices_fundamentals.resource.processor.dto.ReUploadDto;
+import com.pshakhlovich.microservices_fundamentals.resource.processor.domain.StorageMetadata;
+import com.pshakhlovich.microservices_fundamentals.resource.processor.domain.StorageMetadata.StorageType;
 import com.pshakhlovich.microservices_fundamentals.resource.processor.infrastructure.resource.ResourceClient;
 import com.pshakhlovich.microservices_fundamentals.resource.processor.infrastructure.song.SongClient;
 import com.pshakhlovich.microservices_fundamentals.resource.processor.infrastructure.storage.StorageClient;
@@ -43,6 +44,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @EmbeddedKafka(
@@ -138,10 +140,11 @@ class ResourceProcessorListenerIT {
     assertTrue(messageConsumed);
     assertThat(capturedOutput.getOut())
         .contains(LOG_MESSAGE_RECEIVED + resourceMetadataJson, LOG_SONG_METADATA_PERSISTED);
+    verify(resourceClient).reUpload(any(ReUploadDto.class));
   }
 
-  private StorageMetadataDto getPermanentStorage() {
-    return StorageMetadataDto.builder()
+  private StorageMetadata getPermanentStorage() {
+    return StorageMetadata.builder()
             .id(1)
             .storageType(StorageType.PERMANENT)
             .bucket(BUCKET_NAME)

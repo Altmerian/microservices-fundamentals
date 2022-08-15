@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pshakhlovich.microservices_fundamentals.resource.processor.domain.ResourceMetadata;
 import com.pshakhlovich.microservices_fundamentals.resource.processor.domain.SongMetadata;
 import com.pshakhlovich.microservices_fundamentals.resource.processor.dto.ReUploadDto;
-import com.pshakhlovich.microservices_fundamentals.resource.processor.dto.StorageMetadataDto;
+import com.pshakhlovich.microservices_fundamentals.resource.processor.domain.StorageMetadata;
 import com.pshakhlovich.microservices_fundamentals.resource.processor.infrastructure.resource.ResourceClient;
 import com.pshakhlovich.microservices_fundamentals.resource.processor.infrastructure.song.SongClient;
 import com.pshakhlovich.microservices_fundamentals.resource.processor.infrastructure.storage.StorageClient;
@@ -82,7 +82,7 @@ public class ResourceProcessorService {
     var songMetadataId = songClient.storeSongMetadata(songMetadata);
     log.info("Song metadata has been persisted with id=" + songMetadataId);
 
-    StorageMetadataDto permanentStorage = storageClient.getPermanentStorage();
+    StorageMetadata permanentStorage = storageClient.getPermanentStorage();
     resourceClient.reUpload(
             ReUploadDto.builder()
                     .resourceId(resourceId)

@@ -13,6 +13,7 @@ spring:
   liquibase:
     change-log: classpath:db/changelog/changelog-master.xml
   jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
     show-sql: true
   servlet:
     multipart:
@@ -39,3 +40,34 @@ eureka:
   client:
     serviceUrl:
       defaultZone: http://${EUREKA_HOST:localhost}:${EUREKA_PORT:8761}/eureka/
+
+management.endpoints.web.exposure.include: '*'
+management.endpoint.health.show-details: always
+
+management.health.diskspace.enabled: false
+management.health.circuitbreakers.enabled: true
+
+resilience4j:
+  circuitbreaker:
+    circuitBreakerAspectOrder: 1
+    instances:
+      storage-client:
+        registerHealthIndicator: true
+        waitDurationInOpenState: 10s
+        failureRateThreshold: 50
+        slidingWindowSize: 5
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        eventConsumerBufferSize: 10
+        recordExceptions:
+          - com.pshakhlovich.microservices_fundamentals.resource.infrastructure.exception.InfrastructureException
+        ignoreExceptions:
+  retry:
+    retryAspectOrder: 2
+    instances:
+      storage-client:
+        maxAttempts: 3
+        waitDuration: 1s
+        retryExceptions:
+          - com.pshakhlovich.microservices_fundamentals.resource.infrastructure.exception.InfrastructureException

@@ -1,4 +1,4 @@
-package com.pshakhlovich.microservices_fundamentals.resource.processor.dto;
+package com.pshakhlovich.microservices_fundamentals.resource.processor.domain;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -11,7 +11,7 @@ import lombok.Setter;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class StorageMetadataDto {
+public class StorageMetadata {
 
     private Integer id;
     private StorageType storageType;

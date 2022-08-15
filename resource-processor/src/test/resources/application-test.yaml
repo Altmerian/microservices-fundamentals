@@ -1,5 +1,7 @@
 kafka:
   bootstrap-address: ${KAFKA_HOST:localhost}:9092
+  properties:
+    auto.offset.reset: earliest
 eureka:
   client:
     enabled: false

@@ -73,6 +73,7 @@ services:
       - resource-service
       - song-service
       - resource-processor
+      - storage-service
 
   resource-service:
     build:
@@ -118,6 +119,20 @@ services:
 #      - 8082:8082
     depends_on:
       - song-service-db
+      - eureka-discovery-service
+
+  storage-service:
+    build:
+      context: ../storage-service
+      args:
+        JAR_FILE: build/libs/storage-service.jar
+    env_file:
+      - storage-service.env
+      - .env
+    #    ports:
+    #      - 8083:8083
+    depends_on:
+      - storage-service-db
       - eureka-discovery-service
 
 volumes:
