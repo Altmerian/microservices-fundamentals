@@ -37,6 +37,7 @@ import org.springframework.test.annotation.DirtiesContext;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -130,7 +131,7 @@ class ResourceProcessorListenerIT {
 
     when(songClient.storeSongMetadata(any(SongMetadata.class))).thenReturn(SONG_METADATA_ID);
 
-    when(storageClient.getPermanentStorage()).thenReturn(getPermanentStorage());
+    when(storageClient.getAllStoragesMetadata()).thenReturn(getStoragesMetadata());
 
     // when
     producer.send(new ProducerRecord<>(topicName, 1, resourceMetadataJson));
@@ -143,12 +144,12 @@ class ResourceProcessorListenerIT {
     verify(resourceClient).reUpload(any(ReUploadDto.class));
   }
 
-  private StorageMetadata getPermanentStorage() {
-    return StorageMetadata.builder()
+  private List<StorageMetadata> getStoragesMetadata() {
+    return List.of(StorageMetadata.builder()
             .id(1)
             .storageType(StorageType.PERMANENT)
             .bucket(BUCKET_NAME)
             .path("permanent/")
-            .build();
+            .build());
   }
 }

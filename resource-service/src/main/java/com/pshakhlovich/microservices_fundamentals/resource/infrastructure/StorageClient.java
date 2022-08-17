@@ -1,7 +1,6 @@
 package com.pshakhlovich.microservices_fundamentals.resource.infrastructure;
 
 import com.pshakhlovich.microservices_fundamentals.resource.dto.StorageMetadataDto;
-import com.pshakhlovich.microservices_fundamentals.resource.dto.StorageMetadataDto.StorageType;
 import com.pshakhlovich.microservices_fundamentals.resource.infrastructure.config.ExternalClientProperties;
 import com.pshakhlovich.microservices_fundamentals.resource.infrastructure.exception.InfrastructureException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
@@ -18,9 +17,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 
 @Slf4j
 @Component
@@ -33,39 +32,15 @@ public class StorageClient {
 
     private final LoadBalancerClient loadBalancer;
 
-    private StorageMetadataDto cashedStorageMetadata;
+    private volatile List<StorageMetadataDto> cashedStoragesMetadata = Collections.emptyList();
 
-    @CircuitBreaker(name = "storage-client", fallbackMethod = "stagingStorageFallback")
+
+    @CircuitBreaker(name = "storage-client", fallbackMethod = "storageClientFallback")
     @Retry(name = "storage-client")
-    public StorageMetadataDto getStagingStorage() {
-        List<StorageMetadataDto> result = getAllStoragesMetadata();
-        Optional<StorageMetadataDto> stagingStorageOptional = result.stream()
-                .filter(storageMetadataDto -> storageMetadataDto.getStorageType().equals(StorageType.STAGING))
-                .findAny();
-        if (stagingStorageOptional.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No staging storages were found.");
-        }
-        cashedStorageMetadata = stagingStorageOptional.get();
-        return stagingStorageOptional.get();
-    }
-
-    @CircuitBreaker(name = "storage-client", fallbackMethod = "getStorageByIdFallback")
-    @Retry(name = "storage-client")
-    public StorageMetadataDto getStorageById(Integer storageId) {
-        Optional<StorageMetadataDto> storageMetadataOptional = getAllStoragesMetadata().stream()
-                .filter(storageMetadataDto -> storageMetadataDto.getId().equals(storageId))
-                .findFirst();
-        if (storageMetadataOptional.isEmpty()) {
-            throw new ResponseStatusException(
-                    HttpStatus.NOT_FOUND, "StorageMetadata was not found with id=" + storageId);
-        }
-        return storageMetadataOptional.get();
-    }
-
-    private List<StorageMetadataDto> getAllStoragesMetadata() throws InfrastructureException {
+    public List<StorageMetadataDto> getAllStoragesMetadata() throws InfrastructureException {
         try {
-            ServiceInstance storageServiceInstance = loadBalancer.choose(clientProperties.getStorageServiceId());
-            var baseUrl = storageServiceInstance.getUri().toString();
+            ServiceInstance songServiceInstance = loadBalancer.choose(clientProperties.getStorageServiceId());
+            var baseUrl = songServiceInstance.getUri().toString();
 
             ResponseEntity<List<StorageMetadataDto>> responseEntity =
                     new RestTemplate().exchange(
@@ -75,27 +50,28 @@ public class StorageClient {
                             new ParameterizedTypeReference<>() {
                             }
                     );
-            Objects.requireNonNull(responseEntity.getBody());
-            return responseEntity.getBody();
+            List<StorageMetadataDto> storagesMetadata = responseEntity.getBody();
+            Objects.requireNonNull(storagesMetadata);
+
+            if (!storagesMetadata.isEmpty()) {
+                this.cashedStoragesMetadata = storagesMetadata;
+                return storagesMetadata;
+            } else {
+                throw new RuntimeException("No storages' metadata were found.");
+            }
         } catch (Exception e) {
             log.error(e.getMessage());
             throw new InfrastructureException(e.getMessage());
         }
     }
 
-    public StorageMetadataDto stagingStorageFallback(Exception e) {
-        if (cashedStorageMetadata != null) {
+    private List<StorageMetadataDto> storageClientFallback(Exception e) {
+        if (!cashedStoragesMetadata.isEmpty()) {
             log.info("'storage-client' circuit-breaker fallback is active. Getting cashed storage metadata.");
-            return cashedStorageMetadata;
+            return cashedStoragesMetadata;
         } else {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "'storage-client' circuit-breaker fallback method couldn't get cashed storage metadata.", e);
         }
-    }
-
-    public StorageMetadataDto getStorageByIdFallback(Exception e) {
-        log.error("'storage-client' circuit-breaker fallback is active. Storage-service error occurred.");
-        throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
-                "'storage-client' error occurred.", e);
     }
 }

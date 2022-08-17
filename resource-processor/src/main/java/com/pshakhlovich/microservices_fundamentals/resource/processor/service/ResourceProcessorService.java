@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pshakhlovich.microservices_fundamentals.resource.processor.domain.ResourceMetadata;
 import com.pshakhlovich.microservices_fundamentals.resource.processor.domain.SongMetadata;
+import com.pshakhlovich.microservices_fundamentals.resource.processor.domain.StorageMetadata.StorageType;
 import com.pshakhlovich.microservices_fundamentals.resource.processor.dto.ReUploadDto;
 import com.pshakhlovich.microservices_fundamentals.resource.processor.domain.StorageMetadata;
 import com.pshakhlovich.microservices_fundamentals.resource.processor.infrastructure.resource.ResourceClient;
@@ -31,6 +32,8 @@ import java.time.Duration;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 
 @Service
@@ -56,6 +59,23 @@ public class ResourceProcessorService {
     var resourceId = objectMapper.readValue(message, ResourceMetadata.class).getId();
 
     ByteArrayResource resource = resourceClient.getResource(resourceId);
+
+    SongMetadata songMetadata = extractSongMetadata(resourceId, resource);
+
+    var songMetadataId = songClient.storeSongMetadata(songMetadata);
+    log.info("Song metadata has been persisted with id=" + songMetadataId);
+
+    StorageMetadata permanentStorage = getPermanentStorage();
+    resourceClient.reUpload(
+            ReUploadDto.builder()
+                    .resourceId(resourceId)
+                    .storageMetadata(permanentStorage)
+            .build());
+
+    latch.countDown();
+  }
+
+  private SongMetadata extractSongMetadata(Integer resourceId, ByteArrayResource resource) {
     ContentHandler handler = new DefaultHandler();
     Metadata metadata = new Metadata();
     Parser parser = new Mp3Parser();
@@ -69,27 +89,26 @@ public class ResourceProcessorService {
 
     log.info("Extracted song metadata: {}", Arrays.toString(metadata.names()));
 
-    var songMetadata =
-        SongMetadata.builder()
-            .name(metadata.get("dc:title"))
-            .artist(metadata.get("xmpDM:artist"))
-            .album(metadata.get("xmpDM:album"))
-            .length(formatDuration(metadata.get("xmpDM:duration")))
-            .resourceId(resourceId)
-            .year(getYear(metadata))
-            .build();
+    return SongMetadata.builder()
+        .name(metadata.get("dc:title"))
+        .artist(metadata.get("xmpDM:artist"))
+        .album(metadata.get("xmpDM:album"))
+        .length(formatDuration(metadata.get("xmpDM:duration")))
+        .resourceId(resourceId)
+        .year(getYear(metadata))
+        .build();
+  }
 
-    var songMetadataId = songClient.storeSongMetadata(songMetadata);
-    log.info("Song metadata has been persisted with id=" + songMetadataId);
+  private StorageMetadata getPermanentStorage() {
+    List<StorageMetadata> result = storageClient.getAllStoragesMetadata();
 
-    StorageMetadata permanentStorage = storageClient.getPermanentStorage();
-    resourceClient.reUpload(
-            ReUploadDto.builder()
-                    .resourceId(resourceId)
-                    .storageMetadata(permanentStorage)
-            .build());
-
-    latch.countDown();
+    Optional<StorageMetadata> permanentStorageOptional = result.stream()
+            .filter(storageMetadataDto -> storageMetadataDto.getStorageType().equals(StorageType.PERMANENT))
+            .findAny();
+    if (permanentStorageOptional.isEmpty()) {
+      throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Permanent storage metadata wasn't found.");
+    }
+    return permanentStorageOptional.get();
   }
 
   private String formatDuration(String input) {

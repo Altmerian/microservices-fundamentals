@@ -1,7 +1,6 @@
 package com.pshakhlovich.microservices_fundamentals.resource.processor.infrastructure.storage;
 
 import com.pshakhlovich.microservices_fundamentals.resource.processor.domain.StorageMetadata;
-import com.pshakhlovich.microservices_fundamentals.resource.processor.domain.StorageMetadata.StorageType;
 import com.pshakhlovich.microservices_fundamentals.resource.processor.infrastructure.config.ExternalClientProperties;
 import com.pshakhlovich.microservices_fundamentals.resource.processor.infrastructure.exception.InfrastructureException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
@@ -15,13 +14,12 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 
 @Slf4j
 @Component
@@ -34,24 +32,12 @@ public class StorageClient {
 
     private final LoadBalancerClient loadBalancer;
 
-    private StorageMetadata cashedStorageMetadata;
+    private volatile List<StorageMetadata> cashedStoragesMetadata = Collections.emptyList();
+
 
     @CircuitBreaker(name = "storage-client", fallbackMethod = "storageClientFallback")
     @Retry(name = "storage-client")
-    public StorageMetadata getPermanentStorage() {
-        List<StorageMetadata> result = getAllStoragesMetadata();
-
-        Optional<StorageMetadata> permanentStorageOptional = result.stream()
-                .filter(storageMetadataDto -> storageMetadataDto.getStorageType().equals(StorageType.PERMANENT))
-                .findAny();
-        if (permanentStorageOptional.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No permanent storages were found.");
-        }
-        cashedStorageMetadata = permanentStorageOptional.get();
-        return permanentStorageOptional.get();
-    }
-
-    private List<StorageMetadata> getAllStoragesMetadata() throws InfrastructureException {
+    public List<StorageMetadata> getAllStoragesMetadata() throws InfrastructureException {
         try {
             ServiceInstance songServiceInstance = loadBalancer.choose(clientProperties.getStorageServiceId());
             var baseUrl = songServiceInstance.getUri().toString();
@@ -64,19 +50,25 @@ public class StorageClient {
                             new ParameterizedTypeReference<>() {
                             }
                     );
-            Objects.requireNonNull(responseEntity.getBody());
-            return responseEntity.getBody();
+            List<StorageMetadata> storagesMetadata = responseEntity.getBody();
+            Objects.requireNonNull(storagesMetadata);
+
+            if (!storagesMetadata.isEmpty()) {
+                this.cashedStoragesMetadata = storagesMetadata;
+                return storagesMetadata;
+            } else {
+                throw new RuntimeException("No storages' metadata were found.");
+            }
         } catch (Exception e) {
             log.error(e.getMessage());
             throw new InfrastructureException(e.getMessage());
         }
     }
 
-    public StorageMetadata storageClientFallback(Exception e) {
-        log.error(e.getMessage());
-        if (cashedStorageMetadata != null) {
+    private List<StorageMetadata> storageClientFallback(Exception e) {
+        if (!cashedStoragesMetadata.isEmpty()) {
             log.info("'storage-client' circuit-breaker fallback is active. Getting cashed storage metadata.");
-            return cashedStorageMetadata;
+            return cashedStoragesMetadata;
         } else {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "'storage-client' circuit-breaker fallback method couldn't get cashed storage metadata.", e);

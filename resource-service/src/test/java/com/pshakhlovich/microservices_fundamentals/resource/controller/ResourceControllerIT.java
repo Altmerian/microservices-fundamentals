@@ -26,7 +26,6 @@ import org.springframework.test.jdbc.JdbcTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 
 import java.io.IOException;
@@ -78,7 +77,7 @@ class ResourceControllerIT {
   void setUp() {
     mockMvc = MockMvcBuilders.standaloneSetup(resourceController).build();
     JdbcTestUtils.deleteFromTables(jdbcTemplate, "resource_metadata");
-    when(storageClient.getStagingStorage()).thenReturn(getStagingStorage());
+    when(storageClient.getAllStoragesMetadata()).thenReturn(getStoragesMetadata());
   }
 
   @AfterEach
@@ -107,10 +106,9 @@ class ResourceControllerIT {
     byte[] fileContent = classPathResource.getInputStream().readAllBytes();
     var mockMultipartFile =
         new MockMultipartFile("file", TEST_FILE_NAME, AUDIO_CONTENT_TYPE, fileContent);
-    StorageMetadataDto stagingStorage = getStagingStorage();
     Integer resourceId = resourceService.upload(mockMultipartFile);
 
-    when(storageClient.getStorageById(anyInt())).thenReturn(stagingStorage);
+    when(storageClient.getAllStoragesMetadata()).thenReturn(getStoragesMetadata());
     when(awsS3Client.downloadFile(mp3BucketProperties.getBucketName(), STORAGE_PATH + TEST_FILE_NAME)).thenReturn(fileContent);
 
     // when
@@ -133,10 +131,9 @@ class ResourceControllerIT {
     // given
     var mockMultipartFile = getMockMultipartFile();
     Integer resourceId = resourceService.upload(mockMultipartFile);
-    StorageMetadataDto stagingStorage = getStagingStorage();
 
-    when(storageClient.getStorageById(anyInt())).thenReturn(stagingStorage);
-    when(awsS3Client.removeFiles(any(MultiValueMap.class))).thenReturn(List.of(stagingStorage.getPath() + TEST_FILE_NAME));
+    when(storageClient.getAllStoragesMetadata()).thenReturn(getStoragesMetadata());
+    when(awsS3Client.removeFiles(any(MultiValueMap.class))).thenReturn(List.of(STORAGE_PATH + TEST_FILE_NAME));
 
     // when
     var response = mockMvc.perform(delete(RESOURCE_BASE_PATH + "/{ids}", resourceId));
@@ -145,13 +142,13 @@ class ResourceControllerIT {
     response.andExpect(status().isOk()).andExpect(jsonPath("$.ids").value(resourceId));
   }
 
-  private StorageMetadataDto getStagingStorage() {
-    return StorageMetadataDto.builder()
+  private List<StorageMetadataDto> getStoragesMetadata() {
+    return List.of(StorageMetadataDto.builder()
             .id(1)
             .storageType(StorageType.STAGING)
             .bucket(mp3BucketProperties.getBucketName())
             .path("staging/")
-            .build();
+            .build());
   }
 
   private MockMultipartFile getMockMultipartFile() throws IOException {

@@ -3,6 +3,7 @@ package com.pshakhlovich.microservices_fundamentals.resource.service;
 import com.pshakhlovich.microservices_fundamentals.resource.dto.IdWrapper;
 import com.pshakhlovich.microservices_fundamentals.resource.dto.ReUploadDto;
 import com.pshakhlovich.microservices_fundamentals.resource.dto.StorageMetadataDto;
+import com.pshakhlovich.microservices_fundamentals.resource.dto.StorageMetadataDto.StorageType;
 import com.pshakhlovich.microservices_fundamentals.resource.event.EventPublisher;
 import com.pshakhlovich.microservices_fundamentals.resource.infrastructure.AwsS3Client;
 import com.pshakhlovich.microservices_fundamentals.resource.infrastructure.StorageClient;
@@ -26,6 +27,7 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -52,7 +54,7 @@ public class ResourceService {
                                     String.format("Audio file with name '%s' already exists", originalFilename));
                         });
 
-        StorageMetadataDto stagingStorage = storageClient.getStagingStorage();
+        StorageMetadataDto stagingStorage = getStagingStorage();
 
         try {
             awsS3Client.uploadFile(multipartFile, stagingStorage.getBucket(), stagingStorage.getPath());
@@ -81,7 +83,7 @@ public class ResourceService {
         ResourceMetadata resourceMetadata = resourceRepository.getReferenceById(reUploadDto.getResourceId());
 
         try {
-            StorageMetadataDto stagingStorage = storageClient.getStorageById(resourceMetadata.getStorageId());
+            StorageMetadataDto stagingStorage = getStorageById(resourceMetadata.getStorageId());
 
             awsS3Client.copyObject(
                     stagingStorage.getBucket(), stagingStorage.getPath(),
@@ -105,7 +107,7 @@ public class ResourceService {
                                 HttpStatus.NOT_FOUND,
                                 String.format("Resource with id=%d not found", resourceId)));
 
-        var storageMetadata = storageClient.getStorageById(resourceMetadata.getStorageId());
+        var storageMetadata = getStorageById(resourceMetadata.getStorageId());
 
         try {
             return awsS3Client.downloadFile(storageMetadata.getBucket(), storageMetadata.getPath() + resourceMetadata.getFileName());
@@ -127,7 +129,7 @@ public class ResourceService {
         MultiValueMap<String, String> fileKeysByBucketName = new LinkedMultiValueMap<>();
 
         resourcesToDelete.forEach(resourceMetadata -> {
-            var storageMetadataDto = storageClient.getStorageById(resourceMetadata.getStorageId());
+            var storageMetadataDto = getStorageById(resourceMetadata.getStorageId());
             String fileKey = storageMetadataDto.getPath() + resourceMetadata.getFileName();
             idsByFileKeysToDelete.put(fileKey, resourceMetadata.getId());
             fileKeysByBucketName.add(storageMetadataDto.getBucket(), fileKey);
@@ -142,5 +144,27 @@ public class ResourceService {
                         .mapToInt(idsByFileKeysToDelete::get)
                         .sorted()
                         .toArray());
+    }
+
+    private StorageMetadataDto getStagingStorage() {
+        List<StorageMetadataDto> result = storageClient.getAllStoragesMetadata();
+        Optional<StorageMetadataDto> stagingStorageOptional = result.stream()
+                .filter(storageMetadataDto -> storageMetadataDto.getStorageType().equals(StorageType.STAGING))
+                .findAny();
+        if (stagingStorageOptional.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No staging storages were found.");
+        }
+        return stagingStorageOptional.get();
+    }
+
+    private StorageMetadataDto getStorageById(Integer storageId) {
+        Optional<StorageMetadataDto> storageMetadataOptional = storageClient.getAllStoragesMetadata().stream()
+                .filter(storageMetadataDto -> storageMetadataDto.getId().equals(storageId))
+                .findFirst();
+        if (storageMetadataOptional.isEmpty()) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND, "StorageMetadata was not found with id=" + storageId);
+        }
+        return storageMetadataOptional.get();
     }
 }
