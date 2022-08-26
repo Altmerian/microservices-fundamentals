@@ -1,4 +1,10 @@
 version: '3.9'
+x-logging: &logging
+  logging:
+    driver: loki
+    options:
+      loki-url: "http://loki:3100/loki/api/v1/push"
+
 services:
   resource-service-db:
     image: postgres:14-alpine
@@ -49,6 +55,7 @@ services:
       - kafka:/var/lib/kafka/data
 
   eureka-discovery-service:
+    <<: *logging
     build:
       context: ../eureka-discovery-service
       args:
@@ -57,8 +64,11 @@ services:
     ports:
       - 8761:8761
     env_file: .env
+    depends_on:
+      - loki
 
   api-gateway-service:
+    <<: *logging
     build:
       context: ../api-gateway-service
       args:
@@ -74,8 +84,10 @@ services:
       - song-service
       - resource-processor
       - storage-service
+      - loki
 
   resource-service:
+    <<: *logging
     build:
       context: ../resource-service
       args:
@@ -83,16 +95,18 @@ services:
     env_file:
       - resource-service.env
       - .env
-#    ports:
-#      - 8081:8081
+    ports:
+      - 8081:8081
     volumes:
       - ~/.aws/:/root/.aws:ro
     depends_on:
       - resource-service-db
       - kafka
       - eureka-discovery-service
+      - loki
 
   resource-processor:
+    <<: *logging
     build:
       context: ../resource-processor
       args:
@@ -106,8 +120,10 @@ services:
       - resource-service
       - kafka
       - eureka-discovery-service
+      - loki
 
   song-service:
+    <<: *logging
     build:
       context: ../song-service
       args:
@@ -120,8 +136,10 @@ services:
     depends_on:
       - song-service-db
       - eureka-discovery-service
+      - loki
 
   storage-service:
+    <<: *logging
     build:
       context: ../storage-service
       args:
@@ -134,6 +152,30 @@ services:
     depends_on:
       - storage-service-db
       - eureka-discovery-service
+      - loki
+
+  loki:
+    image: grafana/loki:latest
+    volumes:
+      - ../loki-config.yaml:/etc/loki/config.yaml
+    ports:
+      - "8100:8100"
+    command: -config.file=/etc/loki/config.yaml
+
+#  promtail:
+#    image: grafana/promtail:latest
+#    volumes:
+#      - c:/ProgramData/Docker/containers/:/var/log/
+#      - ../promtail-config.yaml:/etc/promtail/config.yml
+#    command: '-config.file=/etc/promtail/config.yml -config.expand-env'
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    depends_on:
+      - loki
+
 
 volumes:
   resource-service-db:
