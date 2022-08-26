@@ -1,9 +1,8 @@
 version: '3.9'
+
 x-logging: &logging
-  logging:
-    driver: loki
-    options:
-      loki-url: "http://loki:3100/loki/api/v1/push"
+  labels:
+    - "scrap-logs=true"
 
 services:
   resource-service-db:
@@ -64,8 +63,6 @@ services:
     ports:
       - 8761:8761
     env_file: .env
-    depends_on:
-      - loki
 
   api-gateway-service:
     <<: *logging
@@ -84,7 +81,6 @@ services:
       - song-service
       - resource-processor
       - storage-service
-      - loki
 
   resource-service:
     <<: *logging
@@ -103,7 +99,6 @@ services:
       - resource-service-db
       - kafka
       - eureka-discovery-service
-      - loki
 
   resource-processor:
     <<: *logging
@@ -114,13 +109,12 @@ services:
     env_file:
       - resource-processor.env
       - .env
-#    ports:
-#      - 8080:8080
+    #    ports:
+    #      - 8080:8080
     depends_on:
       - resource-service
       - kafka
       - eureka-discovery-service
-      - loki
 
   song-service:
     <<: *logging
@@ -131,12 +125,11 @@ services:
     env_file:
       - song-service.env
       - .env
-#    ports:
-#      - 8082:8082
+    #    ports:
+    #      - 8082:8082
     depends_on:
       - song-service-db
       - eureka-discovery-service
-      - loki
 
   storage-service:
     <<: *logging
@@ -152,33 +145,70 @@ services:
     depends_on:
       - storage-service-db
       - eureka-discovery-service
-      - loki
 
   loki:
     image: grafana/loki:latest
     volumes:
       - ../loki-config.yaml:/etc/loki/config.yaml
     ports:
-      - "8100:8100"
+      - "3100:3100"
     command: -config.file=/etc/loki/config.yaml
+    depends_on:
+      - promtail
 
-#  promtail:
-#    image: grafana/promtail:latest
-#    volumes:
-#      - c:/ProgramData/Docker/containers/:/var/log/
-#      - ../promtail-config.yaml:/etc/promtail/config.yml
-#    command: '-config.file=/etc/promtail/config.yml -config.expand-env'
+  promtail:
+    image: grafana/promtail:latest
+    volumes:
+      - ../promtail-config.yaml:/etc/promtail/config.yml
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: '-config.file=/etc/promtail/config.yml -config.expand-env'
+    depends_on:
+      - eureka-discovery-service
+      - resource-service
+      - song-service
+      - resource-processor
+      - storage-service
 
   grafana:
     image: grafana/grafana:latest
     ports:
       - "3000:3000"
+    volumes:
+      - ../grafana/:/etc/grafana/provisioning/
+      - grafana-storage:/var/lib/grafana
     depends_on:
       - loki
 
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - 9090:9090
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    volumes:
+      - ../prometheus-config.yaml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      - cadvisor
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    ports:
+      - 8080:8080
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    depends_on:
+      - eureka-discovery-service
+      - resource-service
+      - song-service
+      - resource-processor
+      - storage-service
 
 volumes:
   resource-service-db:
   song-service-db:
   storage-service-db:
   kafka:
+  grafana-storage:

@@ -1,5 +1,4 @@
 server:
-  http_listen_address: 127.0.0.1
   http_listen_port: 9080
   grpc_listen_port: 0
 
@@ -10,12 +9,16 @@ clients:
   - url: http://loki:3100/loki/api/v1/push
 
 scrape_configs:
-- job_name: system
-  pipeline_stages:
-    - docker: {}
-  static_configs:
-  - targets:
-      - localhost
-    labels:
-      job: varlogs
-      __path__: /var/logs/*/*log
+  - job_name: docker
+    pipeline_stages:
+      - docker: { }
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+        filters:
+          - name: label
+            values: [ "scrap-logs=true" ]
+    relabel_configs:
+      - source_labels: [ '__meta_docker_container_name' ]
+        regex: '/docker-compose_(.*)_[0-9]'
+        target_label: 'container'

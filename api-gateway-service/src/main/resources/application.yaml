@@ -8,6 +8,8 @@ spring:
     name: api-gateway-service
   cloud:
     gateway:
+      metrics:
+        enabled: true
       routes:
         - id: resourceService
           uri: lb://RESOURCE-SERVICE
@@ -21,9 +23,31 @@ spring:
           uri: lb://STORAGE-SERVICE
           predicates:
             - Path=/storages/**
+
+management:
+  endpoint:
+    health:
+      show-details: always
+    metrics:
+      enabled: true
+    prometheus:
+      enabled: true
+    gateway:
+      enabled: true # default value
+  endpoints:
+    web:
+      exposure:
+        include: metrics,info,health,prometheus,gateway
+  health:
+    diskspace.enabled: false
+
 eureka:
   instance:
     hostname: ${API_GATEWAY_HOST:localhost}
+    metadataMap:
+      "prometheus.scrape": "true"
+      "prometheus.path": "/actuator/prometheus"
+      "prometheus.port": "8090"
   client:
     serviceUrl:
       defaultZone: http://${EUREKA_HOST:localhost}:${EUREKA_PORT:8761}/eureka/

@@ -21,6 +21,7 @@ dependencies {
     testImplementation "org.testcontainers:localstack:1.17.3"
 
     runtimeOnly 'org.postgresql:postgresql'
+    runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
 }
 
 dependencyManagement {
