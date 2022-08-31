@@ -1,11 +1,14 @@
 package com.pshakhlovich.microservices_fundamentals.resource.config;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.IntegerSerializer;
 import org.apache.kafka.common.serialization.StringSerializer;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -57,5 +60,11 @@ public class ApplicationConfig {
   @Bean
   public KafkaTemplate<Integer, String> kafkaTemplate() {
     return new KafkaTemplate<>(producerFactory());
+  }
+
+  @Bean
+  MeterRegistryCustomizer<MeterRegistry> registryCustomizer(
+          @Value("${spring.application.name}") String applicationName) {
+    return (registry) -> registry.config().commonTags("application", applicationName);
   }
 }

@@ -4,6 +4,7 @@ plugins {
     id 'java'
     id 'jacoco'
     id "com.palantir.docker" version "0.34.0" apply false
+    id 'de.undercouch.download' version "5.1.2"
 }
 
 jar {
@@ -26,8 +27,18 @@ ext {
     testcontainersVersion = '1.17.3'
     cucumberVersion = '7.4.1'
     junitVersion = '5.8.2'
+    otelVersion = '1.16.0'
     springCloudVersion = "${BOM_VERSION}"
 }
+
+// Download the OpenTelemetry java agent and put it in the build directory
+task downloadAgent(type: Download) {
+    src "https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v${otelVersion}/opentelemetry-javaagent.jar"
+    dest project.projectDir.toString() + "/opentelemetry-javaagent.jar"
+    overwrite true
+}
+
+build.finalizedBy downloadAgent
 
 subprojects {
     apply plugin: 'org.springframework.boot'
@@ -53,6 +64,9 @@ subprojects {
 
         implementation 'org.springframework.boot:spring-boot-starter-web'
         implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+//        implementation 'io.micrometer:io.micrometer:micrometer-core'
+        runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
 
         testImplementation 'org.springframework.boot:spring-boot-starter-test'
 
@@ -124,4 +138,12 @@ subprojects {
         files bootJar.archiveFile.get().asFile
         buildArgs(['JAR_FILE': "${bootJar.archiveFileName.get()}"])
     }
+
+    task copyFileFromRootProject(type: Copy) {
+        from "${rootProject.projectDir}/opentelemetry-javaagent.jar"
+        into 'build/otel'
+        dependsOn rootProject.downloadAgent
+    }
+
+    build.finalizedBy copyFileFromRootProject
 }

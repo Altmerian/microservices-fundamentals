@@ -60,6 +60,8 @@ services:
       args:
         JAR_FILE: build/libs/eureka-discovery-service.jar
     hostname: eureka-discovery-service
+    environment:
+      - OTEL_RESOURCE_ATTRIBUTES=service.name=eureka-discovery-service
     ports:
       - 8761:8761
     env_file: .env
@@ -151,7 +153,7 @@ services:
     volumes:
       - ../loki-config.yaml:/etc/loki/config.yaml
     ports:
-      - "3100:3100"
+      - "3101:3100"
     command: -config.file=/etc/loki/config.yaml
     depends_on:
       - promtail
@@ -174,10 +176,17 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ../grafana/:/etc/grafana/provisioning/
+      - ../grafana/provisioning:/etc/grafana/provisioning/
+      - ../grafana/dashboards:/var/lib/grafana/dashboards
       - grafana-storage:/var/lib/grafana
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
     depends_on:
       - loki
+      - tempo-query
+      - prometheus
 
   prometheus:
     image: prom/prometheus:latest
@@ -205,6 +214,28 @@ services:
       - song-service
       - resource-processor
       - storage-service
+
+  tempo:
+    image: grafana/tempo:latest
+    command: [ "-config.file=/etc/tempo.yaml" ]
+    volumes:
+      - ../tempo-local.yaml:/etc/tempo.yaml
+    restart: unless-stopped
+    ports:
+      - "55680:55680"  # OpenTelemetry
+      - "3102:3100"
+
+  tempo-query:
+    image: grafana/tempo-query:latest
+#    command: ["--grpc-storage-plugin.configuration-file=../tempo-query.yaml"]
+    environment:
+      - BACKEND=tempo:3100
+    volumes:
+      - ../tempo-query.yaml:/etc/tempo-query.yaml
+    ports:
+      - "16686:16686"  # jaeger-ui
+    depends_on:
+      - tempo
 
 volumes:
   resource-service-db:

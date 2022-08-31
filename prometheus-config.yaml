@@ -39,16 +39,15 @@ scrape_configs:
       - source_labels: [__meta_eureka_app_instance_metadata_prometheus_scrape]
         action: keep
         regex: true
-    #
-    # application.yaml (spring-boot)
-    # eureka:
-    #  instance:
-    #    metadataMap:
-    #      "prometheus.scrape": "true"
-    #
+
     # Example relabel to customize metric path based on application
     # "prometheus.path = <metric path>" annotation.
       - source_labels: [__meta_eureka_app_instance_metadata_prometheus_path]
+        action: replace
+        target_label: __metrics_path__
+        regex: (.+)
+
+      - source_labels: [ __meta_eureka_app_instance_metadata_metrics_path ]
         action: replace
         target_label: __metrics_path__
         regex: (.+)
@@ -60,3 +59,11 @@ scrape_configs:
         regex: ([^:]+)(?::\d+)?;(\d+)
         replacement: $1:$2
         target_label: __address__
+
+  - job_name: 'gatewayService'
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 5s
+    static_configs:
+      - targets: [ 'api-gateway-service:8090' ]
+        labels:
+          application: 'api-gateway-service'

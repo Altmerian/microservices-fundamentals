@@ -30,6 +30,8 @@ management:
       show-details: always
     metrics:
       enabled: true
+      tags:
+        application: ${spring.application.name}
     prometheus:
       enabled: true
     gateway:
@@ -47,7 +49,12 @@ eureka:
     metadataMap:
       "prometheus.scrape": "true"
       "prometheus.path": "/actuator/prometheus"
+      "metrics.path": "/actuator/metrics"
       "prometheus.port": "8090"
   client:
     serviceUrl:
       defaultZone: http://${EUREKA_HOST:localhost}:${EUREKA_PORT:8761}/eureka/
+
+logging:
+  pattern:
+    level: trace_id=%mdc{trace_id} span_id=%mdc{span_id} trace_flags=%mdc{trace_flags} %5p

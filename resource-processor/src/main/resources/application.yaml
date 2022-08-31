@@ -53,3 +53,12 @@ resilience4j:
         waitDuration: 1s
         retryExceptions:
           - com.pshakhlovich.microservices_fundamentals.resource.processor.infrastructure.exception.InfrastructureException
+
+logging:
+  pattern:
+    level: trace_id=%mdc{trace_id} span_id=%mdc{span_id} trace_flags=%mdc{trace_flags} %5p
+
+management:
+  metrics:
+    enabled: true
+    tags.application: ${spring.application.name}
