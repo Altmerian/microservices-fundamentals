@@ -27,7 +27,7 @@ ext {
     testcontainersVersion = '1.17.3'
     cucumberVersion = '7.4.1'
     junitVersion = '5.8.2'
-    otelVersion = '1.16.0'
+    otelVersion = '1.17.0'
     springCloudVersion = "${BOM_VERSION}"
 }
 
