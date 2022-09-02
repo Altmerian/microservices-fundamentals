@@ -51,10 +51,11 @@ management:
       show-details: always
     metrics:
       enabled: true
-      tags:
-        application: ${spring.application.name}
     prometheus:
       enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
   endpoints:
     web:
       exposure:
@@ -90,4 +91,4 @@ resilience4j:
 
 logging:
   pattern:
-    level: trace_id=%mdc{trace_id} span_id=%mdc{span_id} trace_flags=%mdc{trace_flags} %5p
+    level: trace_id=%mdc{trace_id} %5p

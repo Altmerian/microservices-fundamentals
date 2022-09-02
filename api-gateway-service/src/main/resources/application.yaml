@@ -32,14 +32,15 @@ management:
   endpoint:
     health:
       show-details: always
-    metrics:
-      enabled: true
-      tags:
-        application: ${spring.application.name}
     prometheus:
+      enabled: true
+    metrics:
       enabled: true
     gateway:
       enabled: true # default value
+  metrics:
+    tags:
+      application: ${spring.application.name}
   endpoints:
     web:
       exposure:
@@ -53,7 +54,6 @@ eureka:
     metadataMap:
       "prometheus.scrape": "true"
       "prometheus.path": "/actuator/prometheus"
-      "metrics.path": "/actuator/metrics"
       "prometheus.port": "8090"
   client:
     serviceUrl:
@@ -61,4 +61,6 @@ eureka:
 
 logging:
   pattern:
-    level: trace_id=%mdc{trace_id} span_id=%mdc{span_id} trace_flags=%mdc{trace_flags} %5p
+    level: trace_id=%mdc{trace_id} %5p
+  level:
+    org.springframework.web.filter.CommonsRequestLoggingFilter: DEBUG

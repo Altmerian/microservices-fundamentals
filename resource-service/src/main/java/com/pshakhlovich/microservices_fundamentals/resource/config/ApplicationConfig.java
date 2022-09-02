@@ -1,6 +1,9 @@
 package com.pshakhlovich.microservices_fundamentals.resource.config;
 
+import io.github.mweirauch.micrometer.jvm.extras.ProcessMemoryMetrics;
+import io.github.mweirauch.micrometer.jvm.extras.ProcessThreadMetrics;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.binder.MeterBinder;
 import lombok.RequiredArgsConstructor;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.NewTopic;
@@ -66,5 +69,15 @@ public class ApplicationConfig {
   MeterRegistryCustomizer<MeterRegistry> registryCustomizer(
           @Value("${spring.application.name}") String applicationName) {
     return (registry) -> registry.config().commonTags("application", applicationName);
+  }
+
+  @Bean
+  public MeterBinder processMemoryMetrics() {
+    return new ProcessMemoryMetrics();
+  }
+
+  @Bean
+  public MeterBinder processThreadMetrics() {
+    return new ProcessThreadMetrics();
   }
 }
