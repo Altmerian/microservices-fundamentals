@@ -1,0 +1,66 @@
+server:
+  port: 8084
+  error:
+    include-message: always
+
+spring:
+  application:
+    name: storage-client
+  thymeleaf:
+    cache: false
+  security:
+    oauth2:
+      client:
+        registration:
+          storage-client-oidc:
+            provider: spring
+            client-id: storage-client
+            client-secret: secret
+            authorization-grant-type: authorization_code
+            redirect-uri: "http://${CLIENT_HOST:127.0.0.1}:8084/login/oauth2/code/{registrationId}"
+            scope: openid
+            client-name: storage-client-oidc
+          storage-client-authorization-code:
+            provider: spring
+            client-id: storage-client
+            client-secret: secret
+            authorization-grant-type: authorization_code
+            redirect-uri: "http://${CLIENT_HOST:127.0.0.1}:8084/authorized"
+            scope: storages.read,storages.write
+            client-name: storage-client-authorization-code
+          storage-client-client-credentials:
+            provider: spring
+            client-id: storage-client
+            client-secret: secret
+            authorization-grant-type: client_credentials
+            scope: storages.read,storages.write
+            client-name: storage-client-client-credentials
+        provider:
+          spring:
+            issuer-uri: http://auth-server:9000
+
+storages:
+  base-uri: http://${STORAGE_SERVICE_HOST:127.0.0.1}:8083/storages
+
+eureka:
+  instance:
+    hostname: ${CLIENT_HOST:localhost}
+    preferIpAddress: false
+    statusPageUrlPath: /actuator/info
+    healthCheckUrlPath: /actuator/health
+  client:
+    serviceUrl:
+      defaultZone: http://${EUREKA_HOST:localhost}:${EUREKA_PORT:8761}/eureka/
+
+logging:
+  level:
+    org.springframework.security: INFO
+    org.springframework.security.oauth2: INFO
+  pattern:
+    level: trace_id=%mdc{trace_id} %5p
+
+management:
+  metrics:
+    enabled: true
+    tags:
+      application: ${spring.application.name}

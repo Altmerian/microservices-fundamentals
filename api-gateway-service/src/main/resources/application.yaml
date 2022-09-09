@@ -23,6 +23,11 @@ spring:
           uri: lb://STORAGE-SERVICE
           predicates:
             - Path=/storages/**
+        - id: authorizationServer
+          uri: lb://AUTHORIZATION-SERVER
+          predicates:
+            - Path=/oauth/**
+            - Path=/login/**
         - id: grafana
           uri: http://grafana:3000
           predicates:
