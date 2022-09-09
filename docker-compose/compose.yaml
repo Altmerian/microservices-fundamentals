@@ -148,6 +148,34 @@ services:
       - storage-service-db
       - eureka-discovery-service
 
+  authorization-server:
+    <<: *logging
+    build:
+      context: ../authorization-server
+      args:
+        JAR_FILE: build/libs/authorization-server.jar
+    env_file:
+      - authorization-server.env
+      - .env
+    #    ports:
+    #      - 9000:9000
+    depends_on:
+      - eureka-discovery-service
+
+  storage-client:
+    <<: *logging
+    build:
+      context: ../storage-client
+      args:
+        JAR_FILE: build/libs/storage-client.jar
+    env_file:
+      - storage-client.env
+      - .env
+    ports:
+      - 8084:8084
+    depends_on:
+      - eureka-discovery-service
+
   loki:
     image: grafana/loki:latest
     command: -config.file=/etc/loki/config.yaml

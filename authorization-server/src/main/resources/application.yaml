@@ -1,27 +1,20 @@
 server:
-  port: 8083
+  port: 9000
   error:
     include-message: always
 
 spring:
-  datasource:
-    url: jdbc:postgresql://${STORAGE_DB_HOST:localhost}:${STORAGE_DB_PORT:5435}/storage-service-db
-    username: root
-    password: Initial0
-  jpa:
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
-    show-sql: true
-    hibernate.ddl-auto: update
   application:
-    name: storage-service
+    name: authorization-server
+#  Custom security properties
   security:
     oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: http://${AUTHORIZATION_SERVER_HOST:auth-server}:9000
+      client-uri: http://${CLIENT_HOST:127.0.0.1}:8084
+      issuer-uri: http://${AUTHORIZATION_SERVER_HOST:auth-server}:${server.port}
+
 eureka:
   instance:
-    hostname: ${STORAGE_SERVICE_HOST:localhost}
+    hostname: ${AUTHORIZATION_SERVER_HOST:localhost}
     preferIpAddress: false
     statusPageUrlPath: /actuator/info
     healthCheckUrlPath: /actuator/health
